@@ -1,4 +1,4 @@
-package example
+package multicluster_gw
 
 import (
 	"testing"
