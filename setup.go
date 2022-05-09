@@ -37,7 +37,7 @@ func ParseStanza(c *caddy.Controller) (*MultiCluster, error) {
 
 	zones := plugin.OriginsFromArgsOrServerBlock(c.RemainingArgs(), c.ServerBlockKeys)
 	multiCluster := New(zones)
-
+	gateway_address := "10.0.2.2"
 	for c.NextBlock() {
 		switch c.Val() {
 		case "kubeconfig":
