@@ -72,7 +72,7 @@ func (m MultiCluster) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns
 	var (
 		records []dns.RR
 		//extra   []dns.RR #TODO check if needed
-		err error
+		//err error
 	)
 
 	// #TODO check before if the name is exists (Check serviceImport via controller)

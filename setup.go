@@ -10,6 +10,11 @@ import (
 
 const pluginName = "multicluster_gw"
 
+var (
+	Gateway_ip4 net.IP
+	Gateway_ip6 net.IP
+)
+
 // init registers this plugin.
 func init() { plugin.Register(pluginName, setup) }
 
@@ -26,7 +31,7 @@ func setup(c *caddy.Controller) error {
 
 	// Add the Plugin to CoreDNS, so Servers can use it in their plugin chain.
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
-		return Example{Next: next}
+		return MultiCluster{Next: next}
 	})
 
 	// All OK, return a nil error.
@@ -39,8 +44,8 @@ func ParseStanza(c *caddy.Controller) (*MultiCluster, error) {
 
 	zones := plugin.OriginsFromArgsOrServerBlock(c.RemainingArgs(), c.ServerBlockKeys)
 	multiCluster := New(zones)
-	Gateway_ip4 := net.IPv4(1, 2, 3, 4)
-	Gateway_ip6 := net.IPv4(1, 2, 3, 4) // #TODO find how to define ip6
+	Gateway_ip4 = net.IPv4(1, 2, 3, 4)
+	Gateway_ip6 = net.IPv4(1, 2, 3, 4) // #TODO find how to define ip6
 
 	for c.NextBlock() {
 		switch c.Val() {
