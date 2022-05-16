@@ -1,6 +1,8 @@
 package multicluster_gw
 
 import (
+	"net"
+
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
@@ -37,7 +39,9 @@ func ParseStanza(c *caddy.Controller) (*MultiCluster, error) {
 
 	zones := plugin.OriginsFromArgsOrServerBlock(c.RemainingArgs(), c.ServerBlockKeys)
 	multiCluster := New(zones)
-	gateway_address := "10.0.2.2"
+	Gateway_ip4 := net.IPv4(1, 2, 3, 4)
+	Gateway_ip6 := net.IPv4(1, 2, 3, 4) // #TODO find how to define ip6
+
 	for c.NextBlock() {
 		switch c.Val() {
 		case "kubeconfig":

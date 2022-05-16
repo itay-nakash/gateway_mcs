@@ -1,11 +1,9 @@
-// Package example is a CoreDNS plugin that prints "example" to stdout on every packet received.
-//
-// It serves as an example CoreDNS plugin with numerous code comments.
 package multicluster_gw
 
 import (
 	"context"
 	"errors"
+	"net"
 
 	"github.com/coredns/coredns/plugin"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
@@ -70,37 +68,38 @@ func (m MultiCluster) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns
 	// "maintain case of original query"
 	zone = qname[len(qname)-len(zone):]
 	state.Zone = zone
-	/*
-		old example code:
 
-		// Wrap.
-		pw := NewResponsePrinter(w)
-
-		// Export metric with the server label set to the current server handling the request.
-		requestCount.WithLabelValues(metrics.WithServer(ctx)).Inc()
-
-		// Call next plugin (if any).
-		return plugin.NextOrFailure(m.Name(), m.Next, ctx, pw, r)
-
-	*/
+	var (
+		records []dns.RR
+		//extra   []dns.RR #TODO check if needed
+		err error
+	)
 
 	// #TODO check before if the name is exists (Check serviceImport via controller)
 	// #TODO check if the controller can sync
-
 	switch state.QType() {
 	case dns.TypeA:
-		log.Debug("Got into A type handel")
-		// make A req to the gateway (?)
+		log.Debug("Handles Type A request")
+		records = append(records, NewARecord("a", Gateway_ip4)) //#TODO understand why it needs function and not just strings
 
-		break
+	case dns.TypeAAAA:
+		log.Debug("Handles Type AAAA request")
+		records = append(records, NewAAAARecord("a", Gateway_ip6)) //#TODO understand why it needs function and not just strings
 
 	default:
-		//Should I distinguish between NODATA and NXDOMAIN?
-		log.Debug("Got into default")
+		// Should I distinguish between NODATA and NXDOMAIN?
 		// #TODO check which error I should return if the req type dosent match
 		// #TODO make sure that fallthrough when NXDOMAIN is not a wanted behavior
-
 	}
+
+	// if the req succeed:
+	message := &dns.Msg{}
+	message.SetReply(r)
+	message.Authoritative = true
+	//Add the answer:
+	message.Answer = append(message.Answer, records...)
+	w.WriteMsg(message)
+	return dns.RcodeSuccess, nil
 }
 
 // Name implements the Handler interface.
@@ -125,4 +124,16 @@ func (r *ResponsePrinter) WriteMsg(res *dns.Msg) error {
 // IsNameError returns true if err indicated a record not found condition
 func (m MultiCluster) IsNameError(err error) bool {
 	return err == errNoItems || err == errNsNotExposed || err == errInvalidRequest
+}
+
+// NewA returns a new A record based on the Service.
+func NewARecord(name string, ip net.IP) *dns.A {
+	return &dns.A{Hdr: dns.RR_Header{Name: name, Rrtype: dns.TypeA,
+		Class: dns.ClassINET, Ttl: defaultTTL}, A: ip}
+}
+
+// NewAAAA returns a new AAAA record based on the Service.
+func NewAAAARecord(name string, ip net.IP) *dns.AAAA {
+	return &dns.AAAA{Hdr: dns.RR_Header{Name: name, Rrtype: dns.TypeAAAA,
+		Class: dns.ClassINET, Ttl: defaultTTL}, AAAA: ip}
 }
