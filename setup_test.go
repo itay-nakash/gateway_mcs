@@ -1,4 +1,4 @@
-package multicluster_gw
+package multicluster
 
 import (
 	"testing"
