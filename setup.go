@@ -44,18 +44,18 @@ func ParseStanza(c *caddy.Controller) (*MultiCluster, error) {
 
 	zones := plugin.OriginsFromArgsOrServerBlock(c.RemainingArgs(), c.ServerBlockKeys)
 	multiCluster := New(zones)
-	Gateway_ip4 = net.IPv4(1, 2, 3, 4)
-	Gateway_ip6 = net.IPv4(1, 2, 3, 4) // #TODO find how to define ip6
+	multiCluster.Gateway_ip4 = net.IPv4(1, 2, 3, 4)
+	multiCluster.Gateway_ip6 = net.IPv4(1, 2, 3, 4) // #TODO find how to define ip6
 
 	for c.NextBlock() {
 		switch c.Val() {
 		case "kubeconfig":
 			//#TODO  update here to get the kubeconfig - check if needed (think so)
-			//#TODO  check if here you get the global var for the gateway ip
+			//#TODO q  check if here you get the global var for the gateway ip
 		case "fallthrough":
-			//#TODO  check if needed
+			//#TODO q  check if needed
 		case "noendpoints":
-			//#TODO  check if needed
+			//#TODO q check if needed
 		default:
 			return nil, c.Errf("unknown property '%s'", c.Val())
 		}
