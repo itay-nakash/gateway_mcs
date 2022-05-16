@@ -8,9 +8,9 @@ import (
 	"errors"
 
 	"github.com/coredns/coredns/plugin"
-	"github.com/coredns/coredns/plugin/metrics"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
 
+	"github.com/coredns/coredns/request"
 	"github.com/miekg/dns"
 )
 
@@ -53,14 +53,54 @@ func (m MultiCluster) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns
 	// Debug log that we've have seen the query. This will only be shown when the debug plugin is loaded.
 	log.Debug("Received response")
 
-	// Wrap.
-	pw := NewResponsePrinter(w)
+	// parse the req:
+	state := request.Request{W: w, Req: r}
 
-	// Export metric with the server label set to the current server handling the request.
-	requestCount.WithLabelValues(metrics.WithServer(ctx)).Inc()
+	// get the req name:
+	qname := state.QName()
 
-	// Call next plugin (if any).
-	return plugin.NextOrFailure(m.Name(), m.Next, ctx, pw, r)
+	// check if any subdomain of one of the zones
+	zone := plugin.Zones(m.Zones).Matches(qname)
+	if zone == "" {
+		// if not - pass it to the next plugin
+		return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
+	}
+
+	// get all the request without the zone (the .local..):
+	// "maintain case of original query"
+	zone = qname[len(qname)-len(zone):]
+	state.Zone = zone
+	/*
+		old example code:
+
+		// Wrap.
+		pw := NewResponsePrinter(w)
+
+		// Export metric with the server label set to the current server handling the request.
+		requestCount.WithLabelValues(metrics.WithServer(ctx)).Inc()
+
+		// Call next plugin (if any).
+		return plugin.NextOrFailure(m.Name(), m.Next, ctx, pw, r)
+
+	*/
+
+	// #TODO check before if the name is exists (Check serviceImport via controller)
+	// #TODO check if the controller can sync
+
+	switch state.QType() {
+	case dns.TypeA:
+		log.Debug("Got into A type handel")
+		// make A req to the gateway (?)
+
+		break
+
+	default:
+		//Should I distinguish between NODATA and NXDOMAIN?
+		log.Debug("Got into default")
+		// #TODO check which error I should return if the req type dosent match
+		// #TODO make sure that fallthrough when NXDOMAIN is not a wanted behavior
+
+	}
 }
 
 // Name implements the Handler interface.
@@ -80,4 +120,9 @@ func NewResponsePrinter(w dns.ResponseWriter) *ResponsePrinter {
 func (r *ResponsePrinter) WriteMsg(res *dns.Msg) error {
 	log.Info(pluginName)
 	return r.ResponseWriter.WriteMsg(res)
+}
+
+// IsNameError returns true if err indicated a record not found condition
+func (m MultiCluster) IsNameError(err error) bool {
+	return err == errNoItems || err == errNsNotExposed || err == errInvalidRequest
 }
