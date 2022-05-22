@@ -14,7 +14,7 @@ func TestSetup(t *testing.T) {
 		t.Fatalf("Expected no errors, but got: %v", err)
 	}
 
-	c = caddy.NewTestController("dns", `example more`)
+	c = caddy.NewTestController("dns", `unknown property`)
 	if err := setup(c); err == nil {
 		t.Fatalf("Expected errors, but got: %v", err)
 	}
