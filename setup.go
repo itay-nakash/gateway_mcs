@@ -1,4 +1,4 @@
-package multicluster
+package gateway_mcs
 
 import (
 	"net"
