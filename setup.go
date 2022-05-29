@@ -1,7 +1,18 @@
 package gateway_mcs
 
+/*
+	Example for req that should be handeled by this plugin:
+	myservice.test.svc.clusterset.local. IN A
+
+	answer example:
+	myservice.test.svc.clusterset.local. 4 IN A 10.42.42.42
+
+*/
+
 import (
 	"net"
+	"strconv"
+	"strings"
 
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
@@ -75,18 +86,11 @@ func ParseStanza(c *caddy.Controller) (*MultiCluster, error) {
 			multiCluster.Fall.SetZonesFromArgs(c.RemainingArgs())
 
 		case "gateway_ip":
-			ip_as_string := c.RemainingArgs()[0]
-			ip_address_len := 4
-			if len(ip_as_string) != ip_address_len {
-				// #TODO check if it maybe can be 6?
+			var err error
+			multiCluster.gateway_ip4, multiCluster.gateway_ip6, err = parseIp(c)
+			if err != nil {
 				return nil, c.ArgErr()
 			}
-
-			input_ip := []byte(ip_as_string)
-			// #TODO maybe check if it even possible to squeze the gateway to only 4 bytes? :
-			multiCluster.gateway_ip4 = net.IPv4(input_ip[0], input_ip[1], input_ip[2], input_ip[3])
-			// #TODO find if it reasnoble way to define ip6
-			multiCluster.gateway_ip6 = net.IPv4(input_ip[0], input_ip[1], input_ip[2], input_ip[3]).To16()
 
 		default:
 			return nil, c.Errf("unknown property '%s'", c.Val())
@@ -94,4 +98,46 @@ func ParseStanza(c *caddy.Controller) (*MultiCluster, error) {
 	}
 
 	return multiCluster, nil
+}
+
+// parse the Ip givven as caddy.Controller arg, as a string
+// #TODO check about adding some error checking (just a random string instead of ip address)
+func parseIp(c *caddy.Controller) (net.IP, net.IP, error) {
+	ip_as_string := c.RemainingArgs()[0]
+	if ip_as_string == "" {
+		return nil, nil, c.ArgErr()
+	}
+	// split the ip according to the dots:
+	ip_ascii := strings.SplitAfter(ip_as_string, ".")
+	// #TODO check if it maybe can be 6?
+	if len(ip_ascii) != 4 {
+		return nil, nil, c.ArgErr()
+	}
+	// get rid of the dots:
+	for i := range ip_ascii {
+		ip_ascii[i] = strings.TrimSuffix(ip_ascii[i], ".") // #TODO maybe add error check for ip address?
+	}
+	// convert to int in order to convert to byte afterwards:
+	dig1, err := strconv.Atoi(ip_ascii[0])
+	if err != nil {
+		return nil, nil, c.ArgErr()
+	}
+	dig2, err := strconv.Atoi(ip_ascii[1])
+	if err != nil {
+		return nil, nil, c.ArgErr()
+	}
+	dig3, err := strconv.Atoi(ip_ascii[2])
+	if err != nil {
+		return nil, nil, c.ArgErr()
+	}
+	dig4, err := strconv.Atoi(ip_ascii[3])
+	if err != nil {
+		return nil, nil, c.ArgErr()
+	}
+	// convert to []byte and create the ip addresses:
+	ip_byte := [4]byte{byte(dig1), byte(dig2), byte(dig3), byte(dig4)}
+	ipv4 := net.IPv4(ip_byte[0], ip_byte[1], ip_byte[2], ip_byte[3])
+	ipv6 := net.IPv4(ip_byte[0], ip_byte[1], ip_byte[2], ip_byte[3]).To16()
+	return ipv4, ipv6, nil
+
 }

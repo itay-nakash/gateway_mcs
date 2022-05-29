@@ -1,6 +1,8 @@
 package gateway_mcs
 
 import (
+	"net"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -17,6 +19,8 @@ func TestSetup(t *testing.T) {
 		shouldErr           bool   // true if test case is expected to produce an error.
 		expectedErrContent  string // substring from the expected error. Empty for positive cases.
 		expectedZoneCount   int    // expected count of defined zones.
+		expectedGatewayIp4  net.IP
+		expectedGatewayIp6  net.IP
 		expectedFallthrough fall.F
 	}{
 		// positive
@@ -25,6 +29,8 @@ func TestSetup(t *testing.T) {
 			false,
 			"",
 			1,
+			net.IPv4(1, 2, 3, 4),
+			net.IPv4(1, 2, 3, 4).To16(),
 			fall.Zero,
 		},
 		{
@@ -32,6 +38,8 @@ func TestSetup(t *testing.T) {
 			false,
 			"",
 			2,
+			net.IPv4(1, 2, 3, 4),
+			net.IPv4(1, 2, 3, 4).To16(),
 			fall.Zero,
 		},
 		{
@@ -41,7 +49,20 @@ func TestSetup(t *testing.T) {
 			false,
 			"",
 			2,
+			net.IPv4(1, 2, 3, 4),
+			net.IPv4(1, 2, 3, 4).To16(),
 			fall.Root,
+		},
+		{
+			`kubernetes coredns.local clusterset.local {
+    gateway_ip 1.1.1.1
+}`,
+			false,
+			"",
+			2,
+			net.IPv4(1, 1, 1, 1),
+			net.IPv4(1, 1, 1, 1).To16(),
+			fall.Zero,
 		},
 	}
 
@@ -93,6 +114,14 @@ func TestSetup(t *testing.T) {
 		// fallthrough
 		if !k8sController.Fall.Equal(test.expectedFallthrough) {
 			t.Errorf("Test %d: Expected kubernetes controller to be initialized with fallthrough '%v'. Instead found fallthrough '%v' for input '%s'", i, test.expectedFallthrough, k8sController.Fall, test.input)
+		}
+
+		// gateway
+		if !reflect.DeepEqual(k8sController.gateway_ip4, test.expectedGatewayIp4) {
+			t.Errorf("Test %d: Expected kubernetes controller to be initialized with gateway Ip4 of '%v'. Instead found gateway Ip4 of '%v' for input '%s'", i, test.expectedGatewayIp4, k8sController.gateway_ip4, test.input)
+		}
+		if !reflect.DeepEqual(k8sController.gateway_ip6, test.expectedGatewayIp6) {
+			t.Errorf("Test %d: Expected kubernetes controller to be initialized with gateway Ip6 of '%v'. Instead found gateway Ip6 of '%v' for input '%s'", i, test.expectedGatewayIp6, k8sController.gateway_ip6, test.input)
 		}
 	}
 }
