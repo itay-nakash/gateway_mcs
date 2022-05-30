@@ -62,8 +62,6 @@ func ParseStanza(c *caddy.Controller) (*MultiCluster, error) {
 
 	zones := plugin.OriginsFromArgsOrServerBlock(c.RemainingArgs(), c.ServerBlockKeys)
 	multiCluster := New(zones)
-	multiCluster.gateway_ip4 = net.IPv4(1, 2, 3, 4)
-	multiCluster.gateway_ip6 = net.IPv4(1, 2, 3, 4).To16()
 
 	for c.NextBlock() {
 		switch c.Val() {

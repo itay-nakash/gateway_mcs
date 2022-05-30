@@ -24,6 +24,8 @@ var (
 	errNoItems        = errors.New("no items found")
 	errNsNotExposed   = errors.New("namespace is not exposed")
 	errInvalidRequest = errors.New("invalid query name")
+	defaultGwIpv4     = net.IPv4(1, 2, 3, 4)
+	defaultGwIpv6     = net.IPv4(1, 2, 3, 4).To16()
 )
 
 // Define log to be a logger with the plugin name in it. This way we can just use log.Info and
@@ -45,7 +47,9 @@ func New(zones []string) *MultiCluster {
 	m := MultiCluster{
 		Zones: zones,
 	}
-
+	// set default gateway:
+	m.gateway_ip4 = defaultGwIpv4
+	m.gateway_ip6 = defaultGwIpv6
 	m.ttl = defaultTTL
 
 	return &m
