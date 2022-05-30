@@ -89,12 +89,13 @@ func (m MultiCluster) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns
 
 	default:
 		// return NODATA error (?)
-		// #TODO q Should I distinguish between NODATA and NXDOMAIN?
+		// #TODO q Should I distinguish between NOData and NXDomain?
 		// #TODO q check which error I should return if the req type dosent match
-	}
 
-	if m.Fall.Through(state.Name()) {
-		return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
+		if m.Fall.Through(state.Name()) {
+			return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
+		}
+		return dns.RcodeNameError, nil // return NXDomain
 	}
 
 	// ----------------check if the ServiceImport exists (with controller)----------
