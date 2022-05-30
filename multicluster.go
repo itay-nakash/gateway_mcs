@@ -54,7 +54,7 @@ func New(zones []string) *MultiCluster {
 // ServeDNS implements the plugin.Handler interface.
 func (m MultiCluster) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	// Debug log that we've have seen the query.
-	log.Debug("Received response")
+	log.Debug("gw_mcs received req")
 
 	// parse the req:
 	state := request.Request{W: w, Req: r}
