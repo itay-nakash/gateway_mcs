@@ -33,7 +33,7 @@ var (
 var log = clog.NewWithPlugin(pluginName)
 
 //MultiCluster implements a plugin supporting multi-cluster DNS spec using a gateway.
-type MultiCluster struct {
+type Multicluster_gw struct {
 	Next         plugin.Handler
 	Zones        []string
 	Fall         fall.F
@@ -43,8 +43,8 @@ type MultiCluster struct {
 	ttl          uint32
 }
 
-func New(zones []string) *MultiCluster {
-	m := MultiCluster{
+func New(zones []string) *Multicluster_gw {
+	m := Multicluster_gw{
 		Zones: zones,
 	}
 	// set default gateway:
@@ -56,7 +56,7 @@ func New(zones []string) *MultiCluster {
 }
 
 // ServeDNS implements the plugin.Handler interface.
-func (m MultiCluster) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+func (m Multicluster_gw) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	// Debug log that we've have seen the query.
 	log.Debug("gw_mcs received req")
 
@@ -119,7 +119,7 @@ func (m MultiCluster) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns
 }
 
 // Name implements the Handler interface.
-func (m MultiCluster) Name() string { return pluginName }
+func (m Multicluster_gw) Name() string { return pluginName }
 
 // ResponsePrinter wrap a dns.ResponseWriter and will write example to standard output when WriteMsg is called.
 type ResponsePrinter struct {
@@ -138,7 +138,7 @@ func (r *ResponsePrinter) WriteMsg(res *dns.Msg) error {
 }
 
 // IsNameError returns true if err indicated a record not found condition
-func (m MultiCluster) IsNameError(err error) bool {
+func (m Multicluster_gw) IsNameError(err error) bool {
 	return err == errNoItems || err == errNsNotExposed || err == errInvalidRequest
 }
 

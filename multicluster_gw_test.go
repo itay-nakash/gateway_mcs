@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMultiCluster(t *testing.T) {
+func TestMultiClusterGw(t *testing.T) {
 	tests := []struct {
 		question            string // Corefile data as string
 		question_type       uint16
@@ -37,7 +37,7 @@ func TestMultiCluster(t *testing.T) {
 		},
 	}
 	// #TODO check if that the wanted zone (?)
-	mcs_plugin := MultiCluster{Zones: []string{"svc.clusterset.local."}, Next: test.ErrorHandler()}
+	mcs_plugin := Multicluster_gw{Zones: []string{"svc.clusterset.local."}, Next: test.ErrorHandler()}
 	ctx := context.TODO()
 	r := new(dns.Msg)
 	rec := dnstest.NewRecorder((&test.ResponseWriter{}))

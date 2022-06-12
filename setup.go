@@ -39,7 +39,7 @@ func setup(c *caddy.Controller) error {
 
 	// Add the Plugin to CoreDNS, so Servers can use it in their plugin chain.
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
-		return MultiCluster{Next: next}
+		return Multicluster_gw{Next: next}
 	})
 
 	// All OK, return a nil error.
@@ -47,7 +47,7 @@ func setup(c *caddy.Controller) error {
 }
 
 // ParseStanza parses a kubernetes stanza
-func ParseStanza(c *caddy.Controller) (*MultiCluster, error) {
+func ParseStanza(c *caddy.Controller) (*Multicluster_gw, error) {
 	c.Next() // Skip pluginName label
 
 	zones := plugin.OriginsFromArgsOrServerBlock(c.RemainingArgs(), c.ServerBlockKeys)
