@@ -1,4 +1,4 @@
-package gateway_mcs
+package multicluster_gw
 
 import (
 	"context"

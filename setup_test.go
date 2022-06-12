@@ -1,4 +1,4 @@
-package gateway_mcs
+package multicluster_gw
 
 import (
 	"net"
@@ -25,7 +25,7 @@ func TestSetup(t *testing.T) {
 	}{
 		// positive
 		{
-			`gateway_mcs clusterset.local`,
+			`multicluster_gw clusterset.local`,
 			false,
 			"",
 			1,
@@ -34,7 +34,7 @@ func TestSetup(t *testing.T) {
 			fall.Zero,
 		},
 		{
-			`gateway_mcs coredns.local clusterset.local`,
+			`multicluster_gw coredns.local clusterset.local`,
 			false,
 			"",
 			2,
@@ -43,7 +43,7 @@ func TestSetup(t *testing.T) {
 			fall.Zero,
 		},
 		{
-			`gateway_mcs coredns.local clusterset.local {
+			`multicluster_gw coredns.local clusterset.local {
     fallthrough
 }`,
 			false,
@@ -54,7 +54,7 @@ func TestSetup(t *testing.T) {
 			fall.Root,
 		},
 		{
-			`gateway_mcs coredns.local clusterset.local {
+			`multicluster_gw coredns.local clusterset.local {
     gateway_ip 1.1.1.1
 }`,
 			false,
