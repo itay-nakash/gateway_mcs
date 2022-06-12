@@ -25,7 +25,7 @@ func TestSetup(t *testing.T) {
 	}{
 		// positive
 		{
-			`multicluster_gw clusterset.local`,
+			`multicluster_gw .svc.clusterset.local.`,
 			false,
 			"",
 			1,
@@ -34,7 +34,7 @@ func TestSetup(t *testing.T) {
 			fall.Zero,
 		},
 		{
-			`multicluster_gw coredns.local clusterset.local`,
+			`multicluster_gw coredns.local .svc.clusterset.local.`,
 			false,
 			"",
 			2,
@@ -43,7 +43,7 @@ func TestSetup(t *testing.T) {
 			fall.Zero,
 		},
 		{
-			`multicluster_gw coredns.local clusterset.local {
+			`multicluster_gw coredns.local .svc.clusterset.local. {
     fallthrough
 }`,
 			false,
@@ -54,7 +54,7 @@ func TestSetup(t *testing.T) {
 			fall.Root,
 		},
 		{
-			`multicluster_gw coredns.local clusterset.local {
+			`multicluster_gw coredns.local .svc.clusterset.local. {
     gateway_ip 1.1.1.1
 }`,
 			false,
