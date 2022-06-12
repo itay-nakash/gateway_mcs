@@ -16,6 +16,7 @@ const pluginName = "multicluster_gw"
 var (
 	Gateway_ip4 net.IP
 	Gateway_ip6 net.IP
+	defualtZone = ".svc.clusterset.local."
 )
 
 // init registers this plugin.
@@ -52,7 +53,10 @@ func ParseStanza(c *caddy.Controller) (*Multicluster_gw, error) {
 	c.Next() // Skip pluginName label
 
 	zones := plugin.OriginsFromArgsOrServerBlock(c.RemainingArgs(), c.ServerBlockKeys)
-	multiCluster := New(zones)
+	if len(zones) == 0 {
+		print("error")
+	}
+	multiCluster := New([]string{"svc.clusterset.local."})
 
 	for c.NextBlock() {
 		switch c.Val() {
