@@ -1,14 +1,5 @@
 package gateway_mcs
 
-/*
-	Example for req that should be handeled by this plugin:
-	myservice.test.svc.clusterset.local. IN A
-
-	answer example:
-	myservice.test.svc.clusterset.local. 4 IN A 10.42.42.42
-
-*/
-
 import (
 	"net"
 	"strconv"
@@ -47,7 +38,6 @@ func setup(c *caddy.Controller) error {
 	// -----------------------------------------------------------
 
 	// Add the Plugin to CoreDNS, so Servers can use it in their plugin chain.
-	// #TODO check why we need caddy controller for the config?..
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
 		return MultiCluster{Next: next}
 	})
@@ -99,7 +89,6 @@ func ParseStanza(c *caddy.Controller) (*MultiCluster, error) {
 }
 
 // parse the Ip givven as caddy.Controller arg, as a string
-// #TODO check about adding some error checking (just a random string instead of ip address)
 func parseIp(c *caddy.Controller) (net.IP, net.IP, error) {
 	ip_as_string := c.RemainingArgs()[0]
 	if ip_as_string == "" {

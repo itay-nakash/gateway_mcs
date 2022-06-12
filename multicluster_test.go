@@ -24,12 +24,20 @@ func TestMultiCluster(t *testing.T) {
 			`myservice.test.svc.clusterset.local.`,
 			dns.TypeA,
 			false,
-			0,
+			dns.RcodeSuccess,
+			nil,
+		},
+		// not for the zone:
+		{
+			`myservice.test.svc.cluster.local.`,
+			dns.TypeA,
+			false,
+			dns.RcodeServerFailure,
 			nil,
 		},
 	}
-
-	mcs_plugin := MultiCluster{Zones: []string{"svc.clusterset.local."}, Next: test.ErrorHandler()} // #TODO check if that the wanted zone (?)
+	// #TODO check if that the wanted zone (?)
+	mcs_plugin := MultiCluster{Zones: []string{"svc.clusterset.local."}, Next: test.ErrorHandler()}
 	ctx := context.TODO()
 	r := new(dns.Msg)
 	rec := dnstest.NewRecorder((&test.ResponseWriter{}))

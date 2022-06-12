@@ -25,7 +25,7 @@ func TestSetup(t *testing.T) {
 	}{
 		// positive
 		{
-			`multicluster clusterset.local`,
+			`gateway_mcs clusterset.local`,
 			false,
 			"",
 			1,
@@ -34,7 +34,7 @@ func TestSetup(t *testing.T) {
 			fall.Zero,
 		},
 		{
-			`multicluster coredns.local clusterset.local`,
+			`gateway_mcs coredns.local clusterset.local`,
 			false,
 			"",
 			2,
@@ -43,7 +43,7 @@ func TestSetup(t *testing.T) {
 			fall.Zero,
 		},
 		{
-			`kubernetes coredns.local clusterset.local {
+			`gateway_mcs coredns.local clusterset.local {
     fallthrough
 }`,
 			false,
@@ -54,7 +54,7 @@ func TestSetup(t *testing.T) {
 			fall.Root,
 		},
 		{
-			`kubernetes coredns.local clusterset.local {
+			`gateway_mcs coredns.local clusterset.local {
     gateway_ip 1.1.1.1
 }`,
 			false,
@@ -71,10 +71,7 @@ func TestSetup(t *testing.T) {
 		1. error if should
 		2. number of zone count that were recognized
 		3. if fallthrough was recognized
-
-		Should add (?) :
-		1. len + values of gateway ip
-
+		4. ip of gateway
 	*/
 	for i, test := range tests {
 		c := caddy.NewTestController("dns", test.input)
