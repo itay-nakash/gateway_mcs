@@ -16,7 +16,7 @@ import (
 
 const (
 	// defaultTTL to apply to all answers.
-	// #TODO q maybe add it to the config?
+	// #TODO maybe add it to the core-config?
 	defaultTTL = 5
 )
 
@@ -28,11 +28,10 @@ var (
 	defaultGwIpv6     = net.IPv4(1, 2, 3, 4).To16()
 )
 
-// Define log to be a logger with the plugin name in it. This way we can just use log.Info and
-// friends to log.
+// Define log to be a logger with the plugin name in it.
 var log = clog.NewWithPlugin(pluginName)
 
-//MultiCluster implements a plugin supporting multi-cluster DNS spec using a gateway.
+// Multicluster_gw implements a plugin supporting multi-cluster DNS spec using a gateway.
 type Multicluster_gw struct {
 	Next         plugin.Handler
 	Zones        []string

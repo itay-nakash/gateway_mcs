@@ -13,10 +13,10 @@ import (
 func TestMultiClusterGw(t *testing.T) {
 	tests := []struct {
 		question            string // Corefile data as string
-		question_type       uint16
-		shouldErr           bool  // true if test case is expected to produce an error.
-		expectedReturnValue int   // The expected return value.
-		expectedErrContent  error // The expected error
+		question_type       uint16 // The givven request type
+		shouldErr           bool   // True if test case is expected to produce an error.
+		expectedReturnValue int    // The expected return value.
+		expectedErrContent  error  // The expected error
 
 	}{
 		// positive
@@ -27,7 +27,7 @@ func TestMultiClusterGw(t *testing.T) {
 			dns.RcodeSuccess,
 			nil,
 		},
-		// not for the zone:
+		// not for the zone, should foward it:
 		{
 			`myservice.test.svc.cluster.local.`,
 			dns.TypeA,
@@ -36,13 +36,14 @@ func TestMultiClusterGw(t *testing.T) {
 			nil,
 		},
 	}
-	// #TODO check if that the wanted zone (?)
-	mcs_plugin := Multicluster_gw{Zones: []string{"svc.clusterset.local."}, Next: test.ErrorHandler()}
+	requestsZone := "svc.clusterset.local."
+	mcs_plugin := Multicluster_gw{Zones: []string{requestsZone}, Next: test.ErrorHandler()}
 	ctx := context.TODO()
 	r := new(dns.Msg)
 	rec := dnstest.NewRecorder((&test.ResponseWriter{}))
 	for _, test := range tests {
 		r.SetQuestion(test.question, test.question_type)
+
 		// call the plugin and check result:
 		return_value, err := mcs_plugin.ServeDNS(ctx, rec, r)
 

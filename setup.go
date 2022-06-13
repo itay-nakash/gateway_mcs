@@ -14,15 +14,15 @@ import (
 const pluginName = "multicluster_gw"
 
 var (
-	Gateway_ip4 net.IP
-	Gateway_ip6 net.IP
+	gateway_ip4 net.IP
+	gateway_ip6 net.IP
 )
 
 // init registers this plugin.
 func init() { plugin.Register(pluginName, setup) }
 
-// setup is the function that gets called when the config parser see the token pluginName. Setup is responsible
-// for parsing any extra options the example plugin may have. The first token this function sees is pluginName.
+// setup is that initialize the plugin givven the core-file settings for it.
+// check for the wanted zones, if fallthrough is wanted, and what the wanted gateway-ip
 func setup(c *caddy.Controller) error {
 
 	multiCluster, err := ParseStanza(c)
@@ -86,7 +86,7 @@ func ParseStanza(c *caddy.Controller) (*Multicluster_gw, error) {
 	return multiCluster, nil
 }
 
-// parse the Ip givven as caddy.Controller arg, as a string
+// parse the Ip given as caddy.Controller arg, as a string, to ipv4 and ipv6 format
 func parseIp(c *caddy.Controller) (net.IP, net.IP, error) {
 	ip_as_string := c.RemainingArgs()[0]
 	if ip_as_string == "" {
