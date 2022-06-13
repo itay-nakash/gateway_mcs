@@ -7,7 +7,7 @@
 ## Description
 
 This plugin direct requsets with the configure zone to a gateway service,
-which will refer them to the wanted service in and outside cluster.
+which will refer them to the wanted service in an outside cluster.
 
 ## Syntax
 
