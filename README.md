@@ -55,6 +55,18 @@ Handle all queries in the `clusterset.local` zone, and refer them to the service
     }
 ```
 
+## How to use the plugin
+
+Installation, and plugin setup steps:
+
+1. Clone core-dns repo
+2. Add the plugin to  `plugins.cfg` file. The [ordering of plugins matters](https://coredns.io/2017/06/08/how-queries-are-processed-in-coredns/),
+   add it just below `kubernetes` plugin that has very similar functionality
+3. Recompile corends (using their makefile)
+4. Build docker-image for your new dns server (you can make sure that it incluedes multicluster_gw plugin by running `./corends --plugins`)
+5. Replace the image in the core-dns deployment in your cluster
+
+
 ## Installation
 
 See CoreDNS documentation about [Compile Time Enabling or Disabling Plugins](https://coredns.io/2017/07/25/compile-time-enabling-or-disabling-plugins/).
