@@ -111,7 +111,7 @@ func TestSetup(t *testing.T) {
 		}
 
 		// gateway
-		if !reflect.DeepEqual(k8sController.gateway_ip4, test.expectedGatewayIp4) {
+		if !reflect.DeepEqual(k8sController.gateway_ip4.To16(), test.expectedGatewayIp4) {
 			t.Errorf("Test %d: Expected kubernetes controller to be initialized with gateway Ip4 of '%v'. Instead found gateway Ip4 of '%v' for input '%s'", i, test.expectedGatewayIp4, k8sController.gateway_ip4, test.input)
 		}
 		if !reflect.DeepEqual(k8sController.gateway_ip6, test.expectedGatewayIp6) {
