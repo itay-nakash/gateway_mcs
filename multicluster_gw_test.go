@@ -27,7 +27,7 @@ func TestMultiClusterGw(t *testing.T) {
 			dns.RcodeSuccess,
 			nil,
 		},
-		// not for the zone, should foward it:
+		// not for the plugin's zone, should foward it and not handle the request:
 		{
 			`myservice.test.svc.cluster.local.`,
 			dns.TypeA,
