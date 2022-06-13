@@ -26,14 +26,33 @@ multicluster [ZONES...] {
 
 ## Config example
 
+Example for a core-config file for k8s cluster.
 Handle all queries in the `clusterset.local` zone, and refer them to the service in the ip `6.6.6.6`. Connect to Kubernetes in-cluster.
 
 ```
 .:53 {
-    `multicluster_gw coredns.local .svc.clusterset.local. {
-    gateway_ip 6.6.6.6
-}`
-}
+        errors
+        health {
+           lameduck 5s
+        }
+        ready
+        multicluster_gw svc.clusterset.local {
+                    gateway_ip 42.42.42.42
+        }
+        kubernetes cluster.local in-addr.arpa ip6.arpa {
+           pods insecure
+           fallthrough in-addr.arpa ip6.arpa
+           ttl 30
+        }
+        prometheus :9153
+        forward . /etc/resolv.conf {
+           max_concurrent 1000
+        }
+        cache 30
+        loop
+        reload
+        loadbalance
+    }
 ```
 
 ## Installation
