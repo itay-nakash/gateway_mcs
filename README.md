@@ -37,7 +37,7 @@ Handle all queries in the `clusterset.local` zone, and refer them to the service
         }
         ready
         multicluster_gw svc.clusterset.local {
-                    gateway_ip 42.42.42.42
+                    gateway_ip 6.6.6.6
         }
         kubernetes cluster.local in-addr.arpa ip6.arpa {
            pods insecure
