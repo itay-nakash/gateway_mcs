@@ -1,11 +1,16 @@
 package multicluster_gw
 
 import (
+	"context"
 	"net"
 
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -69,7 +74,7 @@ func ParseStanza(c *caddy.Controller) (*Multicluster_gw, error) {
 		case "fallthrough":
 			multiCluster.Fall.SetZonesFromArgs(c.RemainingArgs())
 
-		case "gateway_ip":
+		case "gateway":
 			multiCluster.gateway_ip4, multiCluster.gateway_ip6 = parseIp(c)
 
 		default:
@@ -85,9 +90,34 @@ func parseIp(c *caddy.Controller) (net.IP, net.IP) {
 	ip_as_string := c.RemainingArgs()[0]
 	ip := net.ParseIP(ip_as_string)
 	if ip == nil {
-		//The ip was given as string, not a number
-		return nil, nil
+		// The gateway was given as string, so we need to extract from the service name the ip
+		ipv4, ipv6 := getGwIpFromString(ip_as_string)
+		return ipv4, ipv6
 	} else {
 		return ip.To4(), ip.To16()
 	}
+}
+
+func getGwIpFromString(gwName string) (net.IP, net.IP) {
+	//	kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+	var gwIpAsString string
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		panic(err.Error())
+	}
+	ns := "kube-system" // The ns that gw is in
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		panic(err.Error())
+	}
+	services, err := clientset.CoreV1().Services(ns).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		panic(err.Error())
+	}
+	for _, service := range services.Items {
+		if service.Spec.ExternalName == gwName {
+			gwIpAsString = service.Spec.ClusterIP
+		}
+	}
+	return net.ParseIP(gwIpAsString).To4(), net.ParseIP(gwIpAsString).To16()
 }

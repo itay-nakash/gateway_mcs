@@ -53,7 +53,7 @@ func TestSetup(t *testing.T) {
 		},
 		{
 			`multicluster_gw coredns.local .svc.clusterset.local. {
-    gateway_ip 6.6.6.6
+    gateway 6.6.6.6
 }`,
 			false,
 			"",
@@ -70,6 +70,9 @@ func TestSetup(t *testing.T) {
 		2. check number of zone that were recognized
 		3. check if fallthrough was configed correctly
 		4. check for the value of the ip of gateway, and if configed correctly
+
+		Tested to add:
+		1. test reciving gw name and configing it ip address
 	*/
 	for i, test := range tests {
 		c := caddy.NewTestController("dns", test.input)
