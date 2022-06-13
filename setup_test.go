@@ -11,7 +11,6 @@ import (
 )
 
 // TestSetup tests the various things that should be parsed by setup.
-// Make sure you also test for parse errors.
 func TestSetup(t *testing.T) {
 
 	tests := []struct {
@@ -19,18 +18,17 @@ func TestSetup(t *testing.T) {
 		shouldErr           bool   // true if test case is expected to produce an error.
 		expectedErrContent  string // substring from the expected error. Empty for positive cases.
 		expectedZoneCount   int    // expected count of defined zones.
-		expectedGatewayIp4  net.IP
-		expectedGatewayIp6  net.IP
-		expectedFallthrough fall.F
+		expectedGatewayIp4  net.IP // expected value of gateway ip in IP4 format.
+		expectedGatewayIp6  net.IP // expected value of gateway ip in IP6 format.
+		expectedFallthrough fall.F // expected value of fallthourgh setting.
 	}{
-		// positive
 		{
 			`multicluster_gw .svc.clusterset.local.`,
 			false,
 			"",
 			1,
-			net.IPv4(1, 2, 3, 4),
-			net.IPv4(1, 2, 3, 4).To16(),
+			defaultGwIpv4,
+			defaultGwIpv6,
 			fall.Zero,
 		},
 		{
@@ -38,8 +36,8 @@ func TestSetup(t *testing.T) {
 			false,
 			"",
 			2,
-			net.IPv4(1, 2, 3, 4),
-			net.IPv4(1, 2, 3, 4).To16(),
+			defaultGwIpv4,
+			defaultGwIpv6,
 			fall.Zero,
 		},
 		{
@@ -49,29 +47,29 @@ func TestSetup(t *testing.T) {
 			false,
 			"",
 			2,
-			net.IPv4(1, 2, 3, 4),
-			net.IPv4(1, 2, 3, 4).To16(),
+			defaultGwIpv4,
+			defaultGwIpv6,
 			fall.Root,
 		},
 		{
 			`multicluster_gw coredns.local .svc.clusterset.local. {
-    gateway_ip 1.1.1.1
+    gateway_ip 6.6.6.6
 }`,
 			false,
 			"",
 			2,
-			net.IPv4(1, 1, 1, 1),
-			net.IPv4(1, 1, 1, 1).To16(),
+			net.IPv4(6, 6, 6, 6),
+			net.IPv4(6, 6, 6, 6).To16(),
 			fall.Zero,
 		},
 	}
 
 	/*
-		Test for:
-		1. error if should
-		2. number of zone count that were recognized
-		3. if fallthrough was recognized
-		4. ip of gateway
+		Test for those cases:
+		1. check if error was raised if needed
+		2. check number of zone that were recognized
+		3. check if fallthrough was configed correctly
+		4. check for the value of the ip of gateway, and if configed correctly
 	*/
 	for i, test := range tests {
 		c := caddy.NewTestController("dns", test.input)
@@ -102,7 +100,6 @@ func TestSetup(t *testing.T) {
 		}
 
 		// No error was raised, so validate initialization of k8sController
-		//     Zones
 		foundZoneCount := len(k8sController.Zones)
 		if foundZoneCount != test.expectedZoneCount {
 			t.Errorf("Test %d: Expected kubernetes controller to be initialized with %d zones, instead found %d zones: '%v' for input '%s'", i, test.expectedZoneCount, foundZoneCount, k8sController.Zones, test.input)

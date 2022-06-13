@@ -31,11 +31,8 @@ func setup(c *caddy.Controller) error {
 	}
 
 	// ------------#TODO init the controller here------------
-	// tmp code until multiCluster will be used:
-	if multiCluster == nil {
-		print("err")
-	}
-	// -----------------------------------------------------------
+	//
+	// ------------------------------------------------------
 
 	// Add the Plugin to CoreDNS, so Servers can use it in their plugin chain.
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
