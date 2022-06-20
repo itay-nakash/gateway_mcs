@@ -43,7 +43,7 @@ func setup(c *caddy.Controller) error {
 }
 
 // ParseStanza parses a kubernetes stanza
-func ParseStanza(c *caddy.Controller) (*Multicluster_gw, error) {
+func ParseStanza(c *caddy.Controller) (*MulticlusterGw, error) {
 	c.Next() // Skip pluginName label
 
 	zones := plugin.OriginsFromArgsOrServerBlock(c.RemainingArgs(), c.ServerBlockKeys)
@@ -70,7 +70,7 @@ func ParseStanza(c *caddy.Controller) (*Multicluster_gw, error) {
 			multiCluster.Fall.SetZonesFromArgs(c.RemainingArgs())
 
 		case "gateway_ip":
-			multiCluster.gateway_ip4, multiCluster.gateway_ip6 = parseIp(c)
+			multiCluster.gatewayIp4, multiCluster.gatewayIp6 = parseIp(c)
 
 		default:
 			return nil, c.Errf("unknown property '%s'", c.Val())
@@ -82,8 +82,8 @@ func ParseStanza(c *caddy.Controller) (*Multicluster_gw, error) {
 
 // parse the Ip given as caddy.Controller arg, as a string, to ipv4 and ipv6 format
 func parseIp(c *caddy.Controller) (net.IP, net.IP) {
-	ip_as_string := c.RemainingArgs()[0]
-	ip := net.ParseIP(ip_as_string)
+	ipAsString := c.RemainingArgs()[0]
+	ip := net.ParseIP(ipAsString)
 	if ip == nil {
 		//The ip was given as string, not a number
 		return nil, nil

@@ -13,7 +13,7 @@ import (
 func TestMultiClusterGw(t *testing.T) {
 	tests := []struct {
 		question            string // Corefile data as string
-		question_type       uint16 // The givven request type
+		questionType        uint16 // The given request type
 		shouldErr           bool   // True if test case is expected to produce an error.
 		expectedReturnValue int    // The expected return value.
 		expectedErrContent  error  // The expected error
@@ -37,17 +37,17 @@ func TestMultiClusterGw(t *testing.T) {
 		},
 	}
 	requestsZone := "svc.clusterset.local."
-	mcs_plugin := Multicluster_gw{Zones: []string{requestsZone}, Next: test.ErrorHandler()}
+	mcsPlugin := MulticlusterGw{Zones: []string{requestsZone}, Next: test.ErrorHandler()}
 	ctx := context.TODO()
 	r := new(dns.Msg)
 	rec := dnstest.NewRecorder((&test.ResponseWriter{}))
 	for _, test := range tests {
-		r.SetQuestion(test.question, test.question_type)
+		r.SetQuestion(test.question, test.questionType)
 
 		// call the plugin and check result:
-		return_value, err := mcs_plugin.ServeDNS(ctx, rec, r)
+		returnValue, err := mcsPlugin.ServeDNS(ctx, rec, r)
 
-		assert.Equal(t, test.expectedReturnValue, return_value)
+		assert.Equal(t, test.expectedReturnValue, returnValue)
 		if test.shouldErr {
 			assert.NotEmpty(t, err)
 			// #TODO check how to check the spesific error type, and which errors I except?

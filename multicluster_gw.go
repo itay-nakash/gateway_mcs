@@ -31,31 +31,31 @@ var (
 // Define log to be a logger with the plugin name in it.
 var log = clog.NewWithPlugin(pluginName)
 
-// Multicluster_gw implements a plugin supporting multi-cluster DNS spec using a gateway.
-type Multicluster_gw struct {
+// MulticlusterGw implements a plugin supporting multi-cluster DNS spec using a gateway.
+type MulticlusterGw struct {
 	Next         plugin.Handler
 	Zones        []string
 	Fall         fall.F
 	ClientConfig clientcmd.ClientConfig
-	gateway_ip4  net.IP
-	gateway_ip6  net.IP
+	gatewayIp4   net.IP
+	gatewayIp6   net.IP
 	ttl          uint32
 }
 
-func New(zones []string) *Multicluster_gw {
-	m := Multicluster_gw{
+func New(zones []string) *MulticlusterGw {
+	m := MulticlusterGw{
 		Zones: zones,
 	}
 	// set default gateway:
-	m.gateway_ip4 = defaultGwIpv4
-	m.gateway_ip6 = defaultGwIpv6
+	m.gatewayIp4 = defaultGwIpv4
+	m.gatewayIp6 = defaultGwIpv6
 	m.ttl = defaultTTL
 
 	return &m
 }
 
 // ServeDNS implements the plugin.Handler interface.
-func (m Multicluster_gw) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+func (m MulticlusterGw) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	// Debug log that we've have seen the query.
 	log.Debug("gw_mcs received req")
 
@@ -85,10 +85,10 @@ func (m Multicluster_gw) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *
 	switch state.QType() {
 	case dns.TypeA:
 		log.Debug("Handles Type A request")
-		records = append(records, NewARecord(qname, m.gateway_ip4))
+		records = append(records, NewARecord(qname, m.gatewayIp4))
 	case dns.TypeAAAA:
 		log.Debug("Handles Type AAAA request")
-		records = append(records, NewAAAARecord(qname, m.gateway_ip6))
+		records = append(records, NewAAAARecord(qname, m.gatewayIp6))
 
 	default:
 		// return NODATA error (?)
@@ -118,7 +118,7 @@ func (m Multicluster_gw) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *
 }
 
 // Name implements the Handler interface.
-func (m Multicluster_gw) Name() string { return pluginName }
+func (m MulticlusterGw) Name() string { return pluginName }
 
 // ResponsePrinter wrap a dns.ResponseWriter and will write example to standard output when WriteMsg is called.
 type ResponsePrinter struct {
@@ -137,7 +137,7 @@ func (r *ResponsePrinter) WriteMsg(res *dns.Msg) error {
 }
 
 // IsNameError returns true if err indicated a record not found condition
-func (m Multicluster_gw) IsNameError(err error) bool {
+func (m MulticlusterGw) IsNameError(err error) bool {
 	return err == errNoItems || err == errNsNotExposed || err == errInvalidRequest
 }
 
