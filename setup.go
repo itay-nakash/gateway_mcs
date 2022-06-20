@@ -53,7 +53,6 @@ func ParseStanza(c *caddy.Controller) (*Multicluster_gw, error) {
 
 	zones := plugin.OriginsFromArgsOrServerBlock(c.RemainingArgs(), c.ServerBlockKeys)
 	multiCluster := New(zones)
-
 	for c.NextBlock() {
 		switch c.Val() {
 		case "kubeconfig":
@@ -75,7 +74,11 @@ func ParseStanza(c *caddy.Controller) (*Multicluster_gw, error) {
 			multiCluster.Fall.SetZonesFromArgs(c.RemainingArgs())
 
 		case "gateway":
-			multiCluster.gateway_ip4, multiCluster.gateway_ip6 = parseIp(c)
+			var err error
+			multiCluster.gateway_ip4, multiCluster.gateway_ip6, err = parseIp(c)
+			if err != nil {
+				return nil, plugin.Error(pluginName, err)
+			}
 
 		default:
 			return nil, c.Errf("unknown property '%s'", c.Val())
@@ -86,38 +89,38 @@ func ParseStanza(c *caddy.Controller) (*Multicluster_gw, error) {
 }
 
 // parse the Ip given as caddy.Controller arg, as a string, to ipv4 and ipv6 format
-func parseIp(c *caddy.Controller) (net.IP, net.IP) {
+func parseIp(c *caddy.Controller) (net.IP, net.IP, error) {
 	ip_as_string := c.RemainingArgs()[0]
 	ip := net.ParseIP(ip_as_string)
 	if ip == nil {
 		// The gateway was given as string, so we need to extract from the service name the ip
-		ipv4, ipv6 := getGwIpFromString(ip_as_string)
-		return ipv4, ipv6
+		ipv4, ipv6, err := getGwIpFromString(ip_as_string)
+		return ipv4, ipv6, err
 	} else {
-		return ip.To4(), ip.To16()
+		// The gateway was given as an ip address, just foward it
+		return ip.To4(), ip.To16(), nil
 	}
 }
 
-func getGwIpFromString(gwName string) (net.IP, net.IP) {
-	//	kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+func getGwIpFromString(gwName string) (net.IP, net.IP, error) {
 	var gwIpAsString string
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		panic(err.Error())
+		return nil, nil, err
 	}
 	ns := "kube-system" // The ns that gw is in
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		panic(err.Error())
+		return nil, nil, err
 	}
 	services, err := clientset.CoreV1().Services(ns).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
-		panic(err.Error())
+		return nil, nil, err
 	}
 	for _, service := range services.Items {
 		if service.Spec.ExternalName == gwName {
 			gwIpAsString = service.Spec.ClusterIP
 		}
 	}
-	return net.ParseIP(gwIpAsString).To4(), net.ParseIP(gwIpAsString).To16()
+	return net.ParseIP(gwIpAsString).To4(), net.ParseIP(gwIpAsString).To16(), nil
 }
