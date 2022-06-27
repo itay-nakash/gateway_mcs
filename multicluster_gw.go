@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"strings"
 
 	"github.com/coredns/coredns/plugin"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
@@ -39,6 +40,8 @@ type MulticlusterGw struct {
 	ClientConfig clientcmd.ClientConfig
 	gatewayIp4   net.IP
 	gatewayIp6   net.IP
+	svcName      string
+	svcNS        string
 	ttl          uint32
 }
 
@@ -77,34 +80,43 @@ func (m MulticlusterGw) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 	zone = qname[len(qname)-len(zone):]
 	state.Zone = zone
 
+	m.svcName, m.svcNS = parseReqNameNs(qname[:len(qname)-len(zone)])
+
 	var (
 		records []dns.RR
 		// extra   []dns.RR   ---- add in future for SRV records -----
 	)
 
-	switch state.QType() {
-	case dns.TypeA:
-		log.Debug("Handles Type A request")
-		records = append(records, NewARecord(qname, m.gatewayIp4))
-	case dns.TypeAAAA:
-		log.Debug("Handles Type AAAA request")
-		records = append(records, NewAAAARecord(qname, m.gatewayIp6))
+	if siExists(m.svcName, m.svcNS) {
 
-	default:
-		// return NODATA error (?)
-		// #TODO q Should I distinguish between NOData and NXDomain?
-		// #TODO q check which error I should return if the req type dosent match
+		switch state.QType() {
+		case dns.TypeA:
+			log.Debug("Handles Type A request")
+			records = append(records, NewARecord(qname, m.gatewayIp4))
+		case dns.TypeAAAA:
+			log.Debug("Handles Type AAAA request")
+			records = append(records, NewAAAARecord(qname, m.gatewayIp6))
+
+		default:
+			// return NODATA error (?)
+			// #TODO q Should I distinguish between NOData and NXDomain?
+			// #TODO q check which error I should return if the req type dosent match
+
+			if m.Fall.Through(state.Name()) {
+				return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
+			}
+			return dns.RcodeNameError, nil // return NXDomain
+		}
+
+	} else {
+
+		// find what to do here :
 
 		if m.Fall.Through(state.Name()) {
 			return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 		}
 		return dns.RcodeNameError, nil // return NXDomain
 	}
-
-	// ----------------check if the ServiceImport exists (with controller)----------
-	// #TODO check if the controller can sync - if not, return error
-	// #TODO check with controler if the serviceImport exists
-	// ------------------------------------------------------------------------------
 
 	// if the req succeed:
 	message := &dns.Msg{}
@@ -151,4 +163,18 @@ func NewARecord(name string, ip net.IP) *dns.A {
 func NewAAAARecord(name string, ip net.IP) *dns.AAAA {
 	return &dns.AAAA{Hdr: dns.RR_Header{Name: name, Rrtype: dns.TypeAAAA,
 		Class: dns.ClassINET, Ttl: defaultTTL}, AAAA: ip}
+}
+
+func parseReqNameNs(qnameTrimmed string) (string, string) {
+	// #TODO might add error checking? or its clear that should contain .
+	firstDotIndex := strings.IndexByte(qnameTrimmed, '.')
+
+	name := qnameTrimmed[:firstDotIndex]
+	ns := qnameTrimmed[firstDotIndex+1:]
+	ns = ns[:len(ns)-1] // remove the dot in the end
+	return name, ns
+}
+
+func siExists(SvcName string, SvcNs string) bool {
+	return true
 }
