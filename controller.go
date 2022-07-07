@@ -42,7 +42,7 @@ func (r *ServiceImportReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		if errors.IsNotFound(err) {
 			log.Info("ServiceImport resource not found. Assume the corresponding SI was deleted")
 			// deleting the service name and ns:
-			SIset.Delete(GenerateNameAsString(siNameNs))
+			SIset.Delete(GenerateNameAsString(siNameNs.Name, siNameNs.Namespace))
 
 			return ctrl.Result{}, nil
 		}
@@ -56,7 +56,7 @@ func (r *ServiceImportReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	// #TODO what should I do if the
 
 	// update them in the data structure:
-	SIset.Add(GenerateNameAsString(siNameNs))
+	SIset.Add(GenerateNameAsString(siNameNs.Name, siNameNs.Namespace))
 
 	return ctrl.Result{}, nil
 }
@@ -69,6 +69,6 @@ func (r *ServiceImportReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func GenerateNameAsString(siNameNs types.NamespacedName) string {
-	return siNameNs.Name + "." + siNameNs.Namespace
+func GenerateNameAsString(name string, ns string) string {
+	return name + "." + ns
 }

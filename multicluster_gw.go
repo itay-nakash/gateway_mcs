@@ -87,7 +87,7 @@ func (m MulticlusterGw) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 		// extra   []dns.RR   ---- add in future for SRV records -----
 	)
 
-	if siExists(m.svcName, m.svcNS) {
+	if SIset.Contains(GenerateNameAsString(m.svcName, m.svcNS)) {
 
 		switch state.QType() {
 		case dns.TypeA:
@@ -166,15 +166,11 @@ func NewAAAARecord(name string, ip net.IP) *dns.AAAA {
 }
 
 func parseReqNameNs(qnameTrimmed string) (string, string) {
-	// #TODO might add error checking? or its clear that should contain .
+	// TODO: might add error checking? or its clear that should contain .
 	firstDotIndex := strings.IndexByte(qnameTrimmed, '.')
 
 	name := qnameTrimmed[:firstDotIndex]
 	ns := qnameTrimmed[firstDotIndex+1:]
 	ns = ns[:len(ns)-1] // remove the dot in the end
 	return name, ns
-}
-
-func siExists(SvcName string, SvcNs string) bool {
-	return true
 }
