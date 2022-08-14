@@ -4,6 +4,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 )
 
+// TODO: how to declare the set? should it be public varible, or part if the Set struct?
 // can also use map[types.NamespacedName]struct{}:
 type Set struct {
 	Elements map[string]struct{}
