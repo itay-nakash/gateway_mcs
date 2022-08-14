@@ -82,11 +82,9 @@ func (m MulticlusterGw) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 
 	m.svcName, m.svcNS = parseReqNameNs(qname[:len(qname)-len(zone)])
 
-	var (
-		records []dns.RR
-		// extra   []dns.RR   ---- add in future for SRV records -----
-	)
+	var records []dns.RR
 
+	// checks if the SI exists:
 	if SIset.Contains(GenerateNameAsString(m.svcName, m.svcNS)) {
 
 		switch state.QType() {
@@ -98,9 +96,7 @@ func (m MulticlusterGw) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 			records = append(records, NewAAAARecord(qname, m.gatewayIp6))
 
 		default:
-			// return NODATA error (?)
-			// #TODO q Should I distinguish between NOData and NXDomain?
-			// #TODO q check which error I should return if the req type dosent match
+			// TODO: check which error I should return if the req type dosent match
 
 			if m.Fall.Through(state.Name()) {
 				return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
@@ -110,7 +106,8 @@ func (m MulticlusterGw) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 
 	} else {
 
-		// find what to do here :
+		// The service export disent exusts, try fallthrough(?)
+		// return NODATA error (?)
 
 		if m.Fall.Through(state.Name()) {
 			return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
@@ -165,6 +162,8 @@ func NewAAAARecord(name string, ip net.IP) *dns.AAAA {
 		Class: dns.ClassINET, Ttl: defaultTTL}, AAAA: ip}
 }
 
+// parseReqNameNs gets a qnamed request (that was already trimmed from the zone)
+// it returns the name and ns of the wanted serviceImport from the request.
 func parseReqNameNs(qnameTrimmed string) (string, string) {
 	// TODO: might add error checking? or its clear that should contain .
 	firstDotIndex := strings.IndexByte(qnameTrimmed, '.')

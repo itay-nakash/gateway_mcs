@@ -35,12 +35,13 @@ func (r *ServiceImportReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 
 	si := &mcsv1a.ServiceImport{}
 	siNameNs := types.NamespacedName{Name: req.Name, Namespace: req.Namespace}
-	ctx := context.Background()
+	ctx := context.Background() // TODO: figure out how to get the gw ns from the operator, where do I get it?
 	err := r.Get(ctx, siNameNs, si)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.Info("ServiceImport resource not found. Assume the corresponding SI was deleted")
+			log.Info("Removing ServiceImport from the set:")
 			// deleting the service name and ns:
 			SIset.Delete(GenerateNameAsString(siNameNs.Name, siNameNs.Namespace))
 
