@@ -2,7 +2,6 @@ package multicluster_gw
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	"github.com/coredns/coredns/plugin/pkg/dnstest"
@@ -20,7 +19,7 @@ func TestMultiClusterGw(t *testing.T) {
 		shouldErr           bool   // True if test case is expected to produce an error.
 		expectedReturnValue int    // The expected return value.
 		expectedErrContent  error  // The expected error
-
+		addToSet            bool
 	}{
 		// positive
 		{
@@ -31,6 +30,7 @@ func TestMultiClusterGw(t *testing.T) {
 			false,
 			dns.RcodeSuccess,
 			nil,
+			true,
 		},
 		// not for the plugin's zone, should foward it and not handle the request:
 		{
@@ -41,6 +41,19 @@ func TestMultiClusterGw(t *testing.T) {
 			false,
 			dns.RcodeServerFailure,
 			nil,
+			true,
+		},
+
+		//not in the set, should return NODATA:
+		{
+			`myservice.test.svc.clusterset.local.`,
+			"myservice",
+			"test",
+			dns.TypeA,
+			false,
+			dns.RcodeNameError,
+			nil,
+			false,
 		},
 	}
 	requestsZone := "svc.clusterset.local."
@@ -49,7 +62,7 @@ func TestMultiClusterGw(t *testing.T) {
 	r := new(dns.Msg)
 	rec := dnstest.NewRecorder((&test.ResponseWriter{}))
 	for _, test := range tests {
-		initalizeSetForTest(test.question)
+		initalizeSetForTest(test.question, test.serviceName, test.serviceNs, test.addToSet)
 		r.SetQuestion(test.question, test.questionType)
 
 		// call the plugin and check result:
@@ -66,18 +79,12 @@ func TestMultiClusterGw(t *testing.T) {
 	}
 }
 
-func initalizeSetForTest(qustion string) {
+func initalizeSetForTest(qustion string, svcName string, svcNS string, addToSet bool) {
 	// empty the set in each test run:
 	SIset.Elements = make(map[string]struct{})
 
-	// add the current SI to the set:
-
-	//a way to find the names, maybe there is a more generic/prettier to find the zone_len
-	zone_len := strings.Index(qustion, ".clusterset.local.")
-
-	//test the parsing of name and ns from the req:
-	svcName, svcNS := parseReqNameNs(qustion[:len(qustion)-zone_len])
-
-	SIset.Add(GenerateNameAsString(svcName, svcNS))
-
+	if addToSet {
+		// add the current SI to the set:
+		SIset.Add(GenerateNameAsString(svcName, svcNS))
+	}
 }

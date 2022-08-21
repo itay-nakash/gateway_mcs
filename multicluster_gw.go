@@ -106,7 +106,7 @@ func (m MulticlusterGw) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 
 	} else {
 
-		// The service export disent exusts, try fallthrough(?)
+		// The service export dosent exists, try fallthrough(?)
 		// return NODATA error (?)
 
 		if m.Fall.Through(state.Name()) {
