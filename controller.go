@@ -29,13 +29,12 @@ var SIset Set
 // move the current state of the cluster closer to the desired state.
 
 // TODO: check about the 'cntx' (should I get it in Reconcile or not?)
-func (r *ServiceImportReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *ServiceImportReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("serviceimport", req.NamespacedName)
 	log.Info("Enter Reconcile", "req", req)
 
 	si := &mcsv1a.ServiceImport{}
 	siNameNs := types.NamespacedName{Name: req.Name, Namespace: req.Namespace}
-	ctx := context.Background() // TODO: figure out how to get the gw ns from the operator, where do I get it?
 	err := r.Get(ctx, siNameNs, si)
 
 	if err != nil {
