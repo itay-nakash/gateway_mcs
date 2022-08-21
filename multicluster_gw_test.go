@@ -71,14 +71,14 @@ func TestMultiClusterGw(t *testing.T) {
 		assert.Equal(t, test.expectedReturnValue, returnValue)
 		if test.shouldErr {
 			assert.NotEmpty(t, err)
-			// #TODO check how to check the spesific error type, and which errors I except?
 		} else {
 			assert.Nil(t, err)
 		}
-		// #TODO how to check the response message?
 	}
 }
 
+// Function to initalize our set with a serviceImport for service with name svcName, under Ns svcNs.
+// Boolean condition that determine if we do add the service to the set, or not (we add it only if the test wants that this serviceImport will exist).
 func initalizeSetForTest(qustion string, svcName string, svcNS string, addToSet bool) {
 	// empty the set in each test run:
 	SIset.Elements = make(map[string]struct{})
