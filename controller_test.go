@@ -43,28 +43,50 @@ var (
 )
 
 func TestController(t *testing.T) {
-	assert := require.New(t)
+	tests := []struct {
+		shouldAddToSet   bool
+		shouldErr        bool // True if test case is expected to produce an error.
+		preloadedObjects []runtime.Object
+	}{
+		// positive
+		{
+			true,
+			false,
+			[]runtime.Object{serviceImport},
+		},
+		// try to add SI that dosent exists:
 
-	preloadedObjects := []runtime.Object{serviceImport}
-	ser := ServiceImportReconciler{
-		Client: getClient(preloadedObjects),
-		Log:    logr.Logger{},
-		Scheme: getScheme(),
+		{
+			false,
+			false,
+			[]runtime.Object{},
+		},
 	}
 
-	req := reconcile.Request{
-		NamespacedName: types.NamespacedName{
-			Name:      serviceImport.GetName(),
-			Namespace: serviceImport.GetNamespace(),
-		}}
+	assert := require.New(t)
 
-	result, err := ser.Reconcile(context.TODO(), req)
-	assert.Nil(err)
+	for _, test := range tests {
 
-	assert.False(result.Requeue, "unexpected requeue")
+		ser := ServiceImportReconciler{
+			Client: getClient(test.preloadedObjects),
+			Log:    logr.Logger{},
+			Scheme: getScheme(),
+		}
 
-	// make sure that the Reconcile added the ServiceImport to the ds:
-	assert.True(SIset.Contains(GenerateNameAsString(serviceImport.GetName(), serviceImport.GetNamespace())))
+		req := reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      serviceImport.GetName(),
+				Namespace: serviceImport.GetNamespace(),
+			}}
+
+		result, err := ser.Reconcile(context.TODO(), req)
+		if !test.shouldErr {
+			assert.Nil(err)
+			assert.False(result.Requeue, "unexpected requeue")
+		}
+		isContains := SIset.Contains(GenerateNameAsString(serviceImport.GetName(), serviceImport.GetNamespace()))
+		assert.Equal(test.shouldAddToSet, isContains)
+	}
 }
 
 // generate a fake client with preloaded objects
@@ -90,7 +112,6 @@ func newLogger(t *testing.T, enabled bool) *logger {
 }
 
 // return a scheme
-// TODO: ask Etai how to create the Scheme for the test
 func getScheme() *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(mcsv1a1.AddToScheme(scheme))
