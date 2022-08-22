@@ -81,7 +81,7 @@ func TestMultiClusterGw(t *testing.T) {
 // Boolean condition that determine if we do add the service to the set, or not (we add it only if the test wants that this serviceImport will exist).
 func initalizeSetForTest(qustion string, svcName string, svcNS string, addToSet bool) {
 	// empty the set in each test run:
-	SIset.Elements = make(map[string]struct{})
+	SIset = *NewSiSet()
 
 	if addToSet {
 		// add the current SI to the set:

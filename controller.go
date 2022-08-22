@@ -28,11 +28,11 @@ var SIset Set
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 
-// TODO: check about the 'cntx' (should I get it in Reconcile or not?)
 func (r *ServiceImportReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("serviceimport", req.NamespacedName)
-	log.Info("Enter Reconcile", "req", req)
-
+	//TODO: fix the logger
+	//log := r.Log.WithValues("serviceimport", req.NamespacedName)
+	//log.Info("Enter Reconcile", "req", req)
+	SIset = *NewSiSet() // TODO: figure what to do with the set
 	si := &mcsv1a.ServiceImport{}
 	siNameNs := types.NamespacedName{Name: req.Name, Namespace: req.Namespace}
 	err := r.Get(ctx, siNameNs, si)
@@ -51,11 +51,9 @@ func (r *ServiceImportReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	// if it got here, the serviceImport is existing, so its a new ServiceImport:
-	// how to know if its a new one, or changing in an existing one?
-	// #TODO what should I do if the
+	// if we got here (the err is nil), the serviceImport is existing, so its a new ServiceImport:
 
-	// update them in the data structure:
+	// add it to the data structure:
 	SIset.Add(GenerateNameAsString(siNameNs.Name, siNameNs.Namespace))
 
 	return ctrl.Result{}, nil
