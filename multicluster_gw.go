@@ -43,18 +43,15 @@ type MulticlusterGw struct {
 	svcName      string
 	svcNS        string
 	ttl          uint32
+	SISet        Set
 }
 
-func New(zones []string) *MulticlusterGw {
-	m := MulticlusterGw{
-		Zones: zones,
-	}
+func (mcgw *MulticlusterGw) New(zones []string) {
+	mcgw.Zones = zones
 	// set default gateway:
-	m.gatewayIp4 = defaultGwIpv4
-	m.gatewayIp6 = defaultGwIpv6
-	m.ttl = defaultTTL
-
-	return &m
+	mcgw.gatewayIp4 = defaultGwIpv4
+	mcgw.gatewayIp6 = defaultGwIpv6
+	mcgw.ttl = defaultTTL
 }
 
 // ServeDNS implements the plugin.Handler interface.
@@ -85,7 +82,7 @@ func (m MulticlusterGw) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 	var records []dns.RR
 
 	// checks if the SI exists:
-	if SIset.Contains(GenerateNameAsString(m.svcName, m.svcNS)) {
+	if Mcgw.SISet.Contains(GenerateNameAsString(m.svcName, m.svcNS)) {
 
 		switch state.QType() {
 		case dns.TypeA:

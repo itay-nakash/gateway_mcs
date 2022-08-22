@@ -31,7 +31,7 @@ var (
 			Namespace: serviceNS,
 			Name:      serviceName,
 		},
-		//TODO: ask Etai if needed:
+		//TODO: Don't think I need it, meanwhile kept in comment:
 		//		Spec: mcsv1a1.ServiceImportSpec{
 		//			Type:  es.Service.Type,
 		//			Ports: es.Service.Ports,
@@ -72,7 +72,7 @@ func TestController(t *testing.T) {
 			Log:    logr.Logger{},
 			Scheme: getScheme(),
 		}
-
+		Mcgw.SISet = *NewSiSet()
 		req := reconcile.Request{
 			NamespacedName: types.NamespacedName{
 				Name:      serviceImport.GetName(),
@@ -84,7 +84,7 @@ func TestController(t *testing.T) {
 			assert.Nil(err)
 			assert.False(result.Requeue, "unexpected requeue")
 		}
-		isContains := SIset.Contains(GenerateNameAsString(serviceImport.GetName(), serviceImport.GetNamespace()))
+		isContains := Mcgw.SISet.Contains(GenerateNameAsString(serviceImport.GetName(), serviceImport.GetNamespace()))
 		assert.Equal(test.shouldAddToSet, isContains)
 	}
 }

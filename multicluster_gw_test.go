@@ -56,8 +56,7 @@ func TestMultiClusterGw(t *testing.T) {
 			false,
 		},
 	}
-	requestsZone := "svc.clusterset.local."
-	mcsPlugin := MulticlusterGw{Zones: []string{requestsZone}, Next: test.ErrorHandler()}
+	initMcgw()
 	ctx := context.TODO()
 	r := new(dns.Msg)
 	rec := dnstest.NewRecorder((&test.ResponseWriter{}))
@@ -66,7 +65,7 @@ func TestMultiClusterGw(t *testing.T) {
 		r.SetQuestion(test.question, test.questionType)
 
 		// call the plugin and check result:
-		returnValue, err := mcsPlugin.ServeDNS(ctx, rec, r)
+		returnValue, err := Mcgw.ServeDNS(ctx, rec, r)
 
 		assert.Equal(t, test.expectedReturnValue, returnValue)
 		if test.shouldErr {
@@ -81,10 +80,17 @@ func TestMultiClusterGw(t *testing.T) {
 // Boolean condition that determine if we do add the service to the set, or not (we add it only if the test wants that this serviceImport will exist).
 func initalizeSetForTest(qustion string, svcName string, svcNS string, addToSet bool) {
 	// empty the set in each test run:
-	SIset = *NewSiSet()
+	Mcgw.SISet = *NewSiSet()
 
 	if addToSet {
 		// add the current SI to the set:
-		SIset.Add(GenerateNameAsString(svcName, svcNS))
+		Mcgw.SISet.Add(GenerateNameAsString(svcName, svcNS))
 	}
+}
+
+func initMcgw() {
+	requestsZone := "svc.clusterset.local."
+	Mcgw.SISet = *NewSiSet()
+	Mcgw.Zones = []string{requestsZone}
+	Mcgw.Next = test.ErrorHandler()
 }

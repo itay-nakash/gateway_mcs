@@ -72,8 +72,10 @@ func TestSetup(t *testing.T) {
 		4. check for the value of the ip of gateway, and if configed correctly
 	*/
 	for i, test := range tests {
+		// init the Mcgw as a new, empty one:
+		Mcgw = MulticlusterGw{}
 		c := caddy.NewTestController("dns", test.input)
-		k8sController, err := ParseStanza(c)
+		err := ParseStanza(c, &Mcgw)
 
 		if test.shouldErr && err == nil {
 			t.Errorf("Test %d: Expected error, but did not find error for input '%s'. Error was: '%v'", i, test.input, err)
@@ -100,22 +102,22 @@ func TestSetup(t *testing.T) {
 		}
 
 		// No error was raised, so validate initialization of k8sController
-		foundZoneCount := len(k8sController.Zones)
+		foundZoneCount := len(Mcgw.Zones)
 		if foundZoneCount != test.expectedZoneCount {
-			t.Errorf("Test %d: Expected kubernetes controller to be initialized with %d zones, instead found %d zones: '%v' for input '%s'", i, test.expectedZoneCount, foundZoneCount, k8sController.Zones, test.input)
+			t.Errorf("Test %d: Expected kubernetes controller to be initialized with %d zones, instead found %d zones: '%v' for input '%s'", i, test.expectedZoneCount, foundZoneCount, Mcgw.Zones, test.input)
 		}
 
 		// fallthrough
-		if !k8sController.Fall.Equal(test.expectedFallthrough) {
-			t.Errorf("Test %d: Expected kubernetes controller to be initialized with fallthrough '%v'. Instead found fallthrough '%v' for input '%s'", i, test.expectedFallthrough, k8sController.Fall, test.input)
+		if !Mcgw.Fall.Equal(test.expectedFallthrough) {
+			t.Errorf("Test %d: Expected kubernetes controller to be initialized with fallthrough '%v'. Instead found fallthrough '%v' for input '%s'", i, test.expectedFallthrough, Mcgw.Fall, test.input)
 		}
 
 		// gateway
-		if !reflect.DeepEqual(k8sController.gatewayIp4.To16(), test.expectedGatewayIp4) {
-			t.Errorf("Test %d: Expected kubernetes controller to be initialized with gateway Ip4 of '%v'. Instead found gateway Ip4 of '%v' for input '%s'", i, test.expectedGatewayIp4, k8sController.gatewayIp4, test.input)
+		if !reflect.DeepEqual(Mcgw.gatewayIp4.To16(), test.expectedGatewayIp4) {
+			t.Errorf("Test %d: Expected kubernetes controller to be initialized with gateway Ip4 of '%v'. Instead found gateway Ip4 of '%v' for input '%s'", i, test.expectedGatewayIp4, Mcgw.gatewayIp4, test.input)
 		}
-		if !reflect.DeepEqual(k8sController.gatewayIp6, test.expectedGatewayIp6) {
-			t.Errorf("Test %d: Expected kubernetes controller to be initialized with gateway Ip6 of '%v'. Instead found gateway Ip6 of '%v' for input '%s'", i, test.expectedGatewayIp6, k8sController.gatewayIp6, test.input)
+		if !reflect.DeepEqual(Mcgw.gatewayIp6, test.expectedGatewayIp6) {
+			t.Errorf("Test %d: Expected kubernetes controller to be initialized with gateway Ip6 of '%v'. Instead found gateway Ip6 of '%v' for input '%s'", i, test.expectedGatewayIp6, Mcgw.gatewayIp6, test.input)
 		}
 	}
 }

@@ -19,8 +19,6 @@ type ServiceImportReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-var SIset Set
-
 //+kubebuilder:rbac:groups=app.my.domain,resources=serviceimports,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=app.my.domain,resources=serviceimports/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=app.my.domain,resources=serviceimports/finalizers,verbs=update
@@ -32,7 +30,7 @@ func (r *ServiceImportReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	//TODO: fix the logger
 	//log := r.Log.WithValues("serviceimport", req.NamespacedName)
 	//log.Info("Enter Reconcile", "req", req)
-	SIset = *NewSiSet() // TODO: figure what to do with the set
+	Mcgw.SISet = *NewSiSet() // TODO: figure what to do with the set
 	si := &mcsv1a.ServiceImport{}
 	siNameNs := types.NamespacedName{Name: req.Name, Namespace: req.Namespace}
 	err := r.Get(ctx, siNameNs, si)
@@ -42,7 +40,7 @@ func (r *ServiceImportReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			log.Info("ServiceImport resource not found. Assume the corresponding SI was deleted")
 			log.Info("Removing ServiceImport from the set:")
 			// deleting the service name and ns:
-			SIset.Delete(GenerateNameAsString(siNameNs.Name, siNameNs.Namespace))
+			Mcgw.SISet.Delete(GenerateNameAsString(siNameNs.Name, siNameNs.Namespace))
 
 			return ctrl.Result{}, nil
 		}
@@ -54,7 +52,7 @@ func (r *ServiceImportReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// if we got here (the err is nil), the serviceImport is existing, so its a new ServiceImport:
 
 	// add it to the data structure:
-	SIset.Add(GenerateNameAsString(siNameNs.Name, siNameNs.Namespace))
+	Mcgw.SISet.Add(GenerateNameAsString(siNameNs.Name, siNameNs.Namespace))
 
 	return ctrl.Result{}, nil
 }

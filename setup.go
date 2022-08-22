@@ -4,6 +4,7 @@ import (
 	"flag"
 	"net"
 	"os"
+	"sync"
 
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
@@ -24,28 +25,33 @@ var (
 	gateway_ip6 net.IP
 	scheme      = runtime.NewScheme()
 	setupLog    = ctrl.Log.WithName("setup")
+	Mcgw        MulticlusterGw
 )
 
 // init registers this plugin.
-func init() { plugin.Register(pluginName, setup) }
+func init() {
 
-// setup is that initialize the plugin givven the core-file settings for it.
-// check for the wanted zones, if fallthrough is wanted, and what the wanted gateway-ip
-func setup(c *caddy.Controller) error {
+	plugin.Register(pluginName, Mcgw.setup)
 
-	multiCluster, err := ParseStanza(c)
+}
+
+func (Mcgw *MulticlusterGw) setup(c *caddy.Controller) error {
+	Mcgw.SISet.mutex = new(sync.RWMutex)
+	err := ParseStanza(c, Mcgw)
 	if err != nil {
 		return plugin.Error(pluginName, err)
 	}
 
-	// ------------#TODO init the controller here------------
-	//
-	// ------------------------------------------------------
-	initializeController()
+	// TODO: check about the chanells that its the right way to do so:
+	checkControllerSetUp := make(chan bool)
+	go initializeController(checkControllerSetUp)
+
+	//block until finished:
+	checkControllerSetUp <- true
 	// Add the Plugin to CoreDNS, so Servers can use it in their plugin chain.
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
-		multiCluster.Next = next
-		return multiCluster
+		Mcgw.Next = next
+		return Mcgw
 	})
 
 	// All OK, return a nil error.
@@ -53,18 +59,18 @@ func setup(c *caddy.Controller) error {
 }
 
 // ParseStanza parses a kubernetes stanza
-func ParseStanza(c *caddy.Controller) (*MulticlusterGw, error) {
+func ParseStanza(c *caddy.Controller, mcgw *MulticlusterGw) error {
 	c.Next() // Skip pluginName label
 
 	zones := plugin.OriginsFromArgsOrServerBlock(c.RemainingArgs(), c.ServerBlockKeys)
-	multiCluster := New(zones)
+	mcgw.New(zones)
 
 	for c.NextBlock() {
 		switch c.Val() {
 		case "kubeconfig":
 			args := c.RemainingArgs()
 			if len(args) != 1 && len(args) != 2 {
-				return nil, c.ArgErr()
+				return c.ArgErr()
 			}
 			overrides := &clientcmd.ConfigOverrides{}
 			if len(args) == 2 {
@@ -74,20 +80,20 @@ func ParseStanza(c *caddy.Controller) (*MulticlusterGw, error) {
 				&clientcmd.ClientConfigLoadingRules{ExplicitPath: args[0]},
 				overrides,
 			)
-			multiCluster.ClientConfig = config
+			mcgw.ClientConfig = config
 
 		case "fallthrough":
-			multiCluster.Fall.SetZonesFromArgs(c.RemainingArgs())
+			mcgw.Fall.SetZonesFromArgs(c.RemainingArgs())
 
 		case "gateway_ip":
-			multiCluster.gatewayIp4, multiCluster.gatewayIp6 = parseIp(c)
+			mcgw.gatewayIp4, mcgw.gatewayIp6 = parseIp(c)
 
 		default:
-			return nil, c.Errf("unknown property '%s'", c.Val())
+			return c.Errf("unknown property '%s'", c.Val())
 		}
 	}
 
-	return multiCluster, nil
+	return nil
 }
 
 // parse the Ip given as caddy.Controller arg, as a string, to ipv4 and ipv6 format
@@ -102,15 +108,11 @@ func parseIp(c *caddy.Controller) (net.IP, net.IP) {
 	}
 }
 
-// TODO: what to do with this init function??:
-// how can I have two inits in the same file?
-func init() {
+func initializeController(checkControllerSetUp chan<- bool) {
+
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
 	//+kubebuilder:scaffold:scheme
-}
 
-func initializeController() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
@@ -170,6 +172,7 @@ func initializeController() {
 	}
 
 	setupLog.Info("starting manager")
+	checkControllerSetUp <- true
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
