@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"strings"
 
 	"github.com/coredns/coredns/plugin"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
@@ -39,19 +40,18 @@ type MulticlusterGw struct {
 	ClientConfig clientcmd.ClientConfig
 	gatewayIp4   net.IP
 	gatewayIp6   net.IP
+	svcName      string
+	svcNS        string
 	ttl          uint32
+	SISet        Set
 }
 
-func New(zones []string) *MulticlusterGw {
-	m := MulticlusterGw{
-		Zones: zones,
-	}
+func (mcgw *MulticlusterGw) New(zones []string) {
+	mcgw.Zones = zones
 	// set default gateway:
-	m.gatewayIp4 = defaultGwIpv4
-	m.gatewayIp6 = defaultGwIpv6
-	m.ttl = defaultTTL
-
-	return &m
+	mcgw.gatewayIp4 = defaultGwIpv4
+	mcgw.gatewayIp6 = defaultGwIpv6
+	mcgw.ttl = defaultTTL
 }
 
 // ServeDNS implements the plugin.Handler interface.
@@ -77,34 +77,40 @@ func (m MulticlusterGw) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 	zone = qname[len(qname)-len(zone):]
 	state.Zone = zone
 
-	var (
-		records []dns.RR
-		// extra   []dns.RR   ---- add in future for SRV records -----
-	)
+	m.svcName, m.svcNS = parseReqNameNs(qname[:len(qname)-len(zone)])
 
-	switch state.QType() {
-	case dns.TypeA:
-		log.Debug("Handles Type A request")
-		records = append(records, NewARecord(qname, m.gatewayIp4))
-	case dns.TypeAAAA:
-		log.Debug("Handles Type AAAA request")
-		records = append(records, NewAAAARecord(qname, m.gatewayIp6))
+	var records []dns.RR
 
-	default:
+	// checks if the SI exists:
+	if Mcgw.SISet.Contains(GenerateNameAsString(m.svcName, m.svcNS)) {
+
+		switch state.QType() {
+		case dns.TypeA:
+			log.Debug("Handles Type A request")
+			records = append(records, NewARecord(qname, m.gatewayIp4))
+		case dns.TypeAAAA:
+			log.Debug("Handles Type AAAA request")
+			records = append(records, NewAAAARecord(qname, m.gatewayIp6))
+
+		default:
+			// TODO: check which error I should return if the req type dosent match
+
+			if m.Fall.Through(state.Name()) {
+				return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
+			}
+			return dns.RcodeNameError, nil // return NXDomain
+		}
+
+	} else {
+
+		// The service export dosent exists, try fallthrough(?)
 		// return NODATA error (?)
-		// #TODO q Should I distinguish between NOData and NXDomain?
-		// #TODO q check which error I should return if the req type dosent match
 
 		if m.Fall.Through(state.Name()) {
 			return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 		}
 		return dns.RcodeNameError, nil // return NXDomain
 	}
-
-	// ----------------check if the ServiceImport exists (with controller)----------
-	// #TODO check if the controller can sync - if not, return error
-	// #TODO check with controler if the serviceImport exists
-	// ------------------------------------------------------------------------------
 
 	// if the req succeed:
 	message := &dns.Msg{}
@@ -151,4 +157,16 @@ func NewARecord(name string, ip net.IP) *dns.A {
 func NewAAAARecord(name string, ip net.IP) *dns.AAAA {
 	return &dns.AAAA{Hdr: dns.RR_Header{Name: name, Rrtype: dns.TypeAAAA,
 		Class: dns.ClassINET, Ttl: defaultTTL}, AAAA: ip}
+}
+
+// parseReqNameNs gets a qnamed request (that was already trimmed from the zone)
+// it returns the name and ns of the wanted serviceImport from the request.
+func parseReqNameNs(qnameTrimmed string) (string, string) {
+	// TODO: might add error checking? or its clear that should contain .
+	firstDotIndex := strings.IndexByte(qnameTrimmed, '.')
+
+	name := qnameTrimmed[:firstDotIndex]
+	ns := qnameTrimmed[firstDotIndex+1:]
+	ns = ns[:len(ns)-1] // remove the dot in the end
+	return name, ns
 }

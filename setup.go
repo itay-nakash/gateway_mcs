@@ -1,42 +1,57 @@
 package multicluster_gw
 
 import (
-	"context"
+	"flag"
 	"net"
-	"strings"
+	"os"
+	"sync"
 
 	"github.com/coredns/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 const pluginName = "multicluster_gw"
 
+var (
+	gateway_ip4 net.IP
+	gateway_ip6 net.IP
+	scheme      = runtime.NewScheme()
+	setupLog    = ctrl.Log.WithName("setup")
+	Mcgw        MulticlusterGw
+)
+
 // init registers this plugin.
-func init() { plugin.Register(pluginName, setup) }
+func init() {
 
-// setup is that initialize the plugin givven the core-file settings for it.
-// check for the wanted zones, if fallthrough is wanted, and what the wanted gateway-ip
-func setup(c *caddy.Controller) error {
+	plugin.Register(pluginName, Mcgw.setup)
 
-	multiCluster, err := ParseStanza(c)
+}
+
+func (Mcgw *MulticlusterGw) setup(c *caddy.Controller) error {
+	Mcgw.SISet.mutex = new(sync.RWMutex)
+	err := ParseStanza(c, Mcgw)
 	if err != nil {
 		return plugin.Error(pluginName, err)
 	}
 
-	// ------------#TODO init the controller here------------
-	//
-	// ------------------------------------------------------
+	// TODO: check about the chanells that its the right way to do so:
+	checkControllerSetUp := make(chan bool)
+	go initializeController(checkControllerSetUp)
 
+	//block until finished:
+	checkControllerSetUp <- true
 	// Add the Plugin to CoreDNS, so Servers can use it in their plugin chain.
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
-		multiCluster.Next = next
-		return multiCluster
+		Mcgw.Next = next
+		return Mcgw
 	})
 
 	// All OK, return a nil error.
@@ -44,17 +59,18 @@ func setup(c *caddy.Controller) error {
 }
 
 // ParseStanza parses a kubernetes stanza
-func ParseStanza(c *caddy.Controller) (*MulticlusterGw, error) {
+func ParseStanza(c *caddy.Controller, mcgw *MulticlusterGw) error {
 	c.Next() // Skip pluginName label
 
 	zones := plugin.OriginsFromArgsOrServerBlock(c.RemainingArgs(), c.ServerBlockKeys)
-	multiCluster := New(zones)
+	mcgw.New(zones)
+
 	for c.NextBlock() {
 		switch c.Val() {
 		case "kubeconfig":
 			args := c.RemainingArgs()
 			if len(args) != 1 && len(args) != 2 {
-				return nil, c.ArgErr()
+				return c.ArgErr()
 			}
 			overrides := &clientcmd.ConfigOverrides{}
 			if len(args) == 2 {
@@ -64,77 +80,101 @@ func ParseStanza(c *caddy.Controller) (*MulticlusterGw, error) {
 				&clientcmd.ClientConfigLoadingRules{ExplicitPath: args[0]},
 				overrides,
 			)
-			multiCluster.ClientConfig = config
+			mcgw.ClientConfig = config
 
 		case "fallthrough":
-			multiCluster.Fall.SetZonesFromArgs(c.RemainingArgs())
+			mcgw.Fall.SetZonesFromArgs(c.RemainingArgs())
 
-		case "gateway":
-			var err error
-			multiCluster.gatewayIp4, multiCluster.gatewayIp6, err = parseIp(c)
-			if err != nil {
-				return nil, plugin.Error(pluginName, err)
-			}
+		case "gateway_ip":
+			mcgw.gatewayIp4, mcgw.gatewayIp6 = parseIp(c)
 
 		default:
-			return nil, c.Errf("unknown property '%s'", c.Val())
+			return c.Errf("unknown property '%s'", c.Val())
 		}
 	}
 
-	return multiCluster, nil
+	return nil
 }
 
 // parse the Ip given as caddy.Controller arg, as a string, to ipv4 and ipv6 format
-func parseIp(c *caddy.Controller) (net.IP, net.IP, error) {
-	ip_as_string := c.RemainingArgs()[0]
-	ip := net.ParseIP(ip_as_string)
+func parseIp(c *caddy.Controller) (net.IP, net.IP) {
+	ipAsString := c.RemainingArgs()[0]
+	ip := net.ParseIP(ipAsString)
 	if ip == nil {
-		// The gateway was given as string, so we need to extract from the service name the ip
-		ipv4, ipv6, err := getGwIpFromString(ip_as_string)
-		return ipv4, ipv6, err
-		//return net.IPv4(6, 6, 6, 6), net.IPv4(6, 6, 6, 6).To16(), nil
+		//The ip was given as string, not a number
+		return nil, nil
 	} else {
-		// The gateway was given as an ip address, just foward it
-		return ip.To4(), ip.To16(), nil
+		return ip.To4(), ip.To16()
 	}
 }
 
-func getGwIpFromString(gwFqdn string) (net.IP, net.IP, error) {
-	var gwIpAsString string
-	gwName, gwNs := splitNameAndNs(gwFqdn)
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return nil, nil, err
+func initializeController(checkControllerSetUp chan<- bool) {
+
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	//+kubebuilder:scaffold:scheme
+
+	var metricsAddr string
+	var enableLeaderElection bool
+	var probeAddr string
+	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
+		"Enable leader election for controller manager. "+
+			"Enabling this will ensure there is only one active controller manager.")
+	opts := zap.Options{
+		Development: true,
 	}
-	clientset, err := kubernetes.NewForConfig(config)
+	opts.BindFlags(flag.CommandLine)
+	flag.Parse()
+
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+		Scheme:                 scheme,
+		MetricsBindAddress:     metricsAddr,
+		Port:                   9443,
+		HealthProbeBindAddress: probeAddr,
+		LeaderElection:         enableLeaderElection,
+		LeaderElectionID:       "ecaf1259.my.domain",
+		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
+		// when the Manager ends. This requires the binary to immediately end when the
+		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
+		// speeds up voluntary leader transitions as the new leader don't have to wait
+		// LeaseDuration time first.
+		//
+		// In the default scaffold provided, the program ends immediately after
+		// the manager stops, so would be fine to enable this option. However,
+		// if you are doing or is intended to do any operation such as perform cleanups
+		// after the manager stops then its usage might be unsafe.
+		// LeaderElectionReleaseOnCancel: true,
+	})
 	if err != nil {
-		return nil, nil, err
+		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
 	}
 
-	services, err := clientset.CoreV1().Services(gwNs).List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return nil, nil, err
+	if err = (&ServiceImportReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Guestbook")
+		os.Exit(1)
 	}
-	for _, service := range services.Items {
-		if service.Spec.ExternalName == gwName {
-			gwIpAsString = service.Spec.ClusterIP
-		}
-	}
-	// Here it from some reason gets in 'gwIpAsString' something that gives 'ParseError' from ParseIP,
-	// I'm currently not sure how to debug it (its from the 'List' function, using the client..)
-	print(gwIpAsString)
-	return net.ParseIP(gwIpAsString).To4(), net.ParseIP(gwIpAsString).To16(), nil
-}
+	//+kubebuilder:scaffold:builder
 
-func splitNameAndNs(gwFqdn string) (string, string) {
-	nameNS := strings.Split(gwFqdn, ".")
-	var ns string
-	// Trim the string until the '.' :
-	if idx := strings.IndexByte(nameNS[1], '.'); idx >= 0 {
-		ns = nameNS[1][:idx]
-	} else {
-		ns = nameNS[1]
+	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up health check")
+		os.Exit(1)
 	}
-	name := nameNS[0]
-	return name, ns
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up ready check")
+		os.Exit(1)
+	}
+
+	setupLog.Info("starting manager")
+	checkControllerSetUp <- true
+	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+		setupLog.Error(err, "problem running manager")
+		os.Exit(1)
+	}
 }
