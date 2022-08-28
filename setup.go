@@ -37,7 +37,7 @@ func init() {
 }
 
 func (Mcgw *MulticlusterGw) setup(c *caddy.Controller) error {
-	log.Debug("Started setup function")
+	log.Info("Started setup function")
 	Mcgw.SISet.mutex = new(sync.RWMutex)
 	err := ParseStanza(c, Mcgw)
 	if err != nil {
@@ -52,12 +52,13 @@ func (Mcgw *MulticlusterGw) setup(c *caddy.Controller) error {
 	//block until chanell gets a value in 'initializeController':
 	wg.Wait()
 
-	log.Debug("Started to register the Plugin")
+	log.Info("Started to register the Plugin")
 	// Add the Plugin to CoreDNS, so Servers can use it in their plugin chain.
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
 		Mcgw.Next = next
 		return Mcgw
 	})
+	log.Info("Finished adding the Plugin")
 
 	// All OK, return a nil error.
 	return nil
@@ -66,6 +67,7 @@ func (Mcgw *MulticlusterGw) setup(c *caddy.Controller) error {
 // ParseStanza parses a kubernetes stanza
 func ParseStanza(c *caddy.Controller, mcgw *MulticlusterGw) error {
 	c.Next() // Skip pluginName label
+	log.Info("Started to parse Stanza")
 
 	zones := plugin.OriginsFromArgsOrServerBlock(c.RemainingArgs(), c.ServerBlockKeys)
 	mcgw.New(zones)
@@ -97,6 +99,7 @@ func ParseStanza(c *caddy.Controller, mcgw *MulticlusterGw) error {
 			return c.Errf("unknown property '%s'", c.Val())
 		}
 	}
+	log.Info("Finish to parse Stanza")
 
 	return nil
 }
