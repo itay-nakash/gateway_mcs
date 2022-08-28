@@ -105,7 +105,7 @@ func (m MulticlusterGw) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 
 		// The service export dosent exists, try fallthrough(?)
 		// return NODATA error (?)
-
+		log.Debug("Didn't find the SI in the SIset")
 		if m.Fall.Through(state.Name()) {
 			return plugin.NextOrFailure(m.Name(), m.Next, ctx, w, r)
 		}

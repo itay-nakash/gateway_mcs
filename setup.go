@@ -30,12 +30,13 @@ var (
 
 // init registers this plugin.
 func init() {
-
+	log.Debug("Started init function")
 	plugin.Register(pluginName, Mcgw.setup)
 
 }
 
 func (Mcgw *MulticlusterGw) setup(c *caddy.Controller) error {
+	log.Debug("Started setup function")
 	Mcgw.SISet.mutex = new(sync.RWMutex)
 	err := ParseStanza(c, Mcgw)
 	if err != nil {
@@ -48,6 +49,8 @@ func (Mcgw *MulticlusterGw) setup(c *caddy.Controller) error {
 
 	//block until finished:
 	checkControllerSetUp <- true
+
+	log.Debug("Started to register the Plugin")
 	// Add the Plugin to CoreDNS, so Servers can use it in their plugin chain.
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
 		Mcgw.Next = next
@@ -109,7 +112,7 @@ func parseIp(c *caddy.Controller) (net.IP, net.IP) {
 }
 
 func initializeController(checkControllerSetUp chan<- bool) {
-
+	log.Debug("Started to initialize Controller")
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 
