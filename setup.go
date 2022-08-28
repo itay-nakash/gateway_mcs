@@ -114,6 +114,7 @@ func parseIp(c *caddy.Controller) (net.IP, net.IP) {
 
 func initializeController(checkControllerSetUp chan<- bool) {
 	log.Debug("Started to initialize Controller")
+	log.Debug("Updated Controller setup")
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(mcsv1a1.AddToScheme(scheme))
 	log.Debug("Added mcsv1a1 to scheme")
