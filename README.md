@@ -61,9 +61,11 @@ Installation, and plugin setup steps:
    add it just below `kubernetes` plugin that has very similar functionality.
    You should add to plugin.cfg the line: 'multicluster_gw:github.com/itay-nakash/multicluster_gw' 
 3. Recompile corends (using their makefile)
-4. Build docker-image for your new dns server (you can make sure that it incluedes multicluster_gw plugin by running `./corends --plugins`)
-5. Replace the image in the core-dns deployment in your cluster to your new image
-6. Change the corefile to configure it to include the plugin (for example, as the example above)
-7. Terminate the current coredns pod (to let it come back with the new core-config settings) 
-8. Enjoy your brand-new coredns server :))
+4. make sure that the compiled coredns incluedes 'multicluster_gw' plugin by running `./corends --plugins`
+5. Build docker-image for your new dns server
+6. Replace the image in the core-dns deployment in your cluster to your custom image (that inculdes the plugin)
+7. Change the corefile to configure it to include the plugin (for example, as the example deatiled above)
+8. Terminate the current coredns pod (to let it come back with the new core-config settings).
+for convenience you may want to edit the deployment to include only one replica of the coredns.
+9. Enjoy your brand-new coredns server :))
 
