@@ -16,6 +16,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	mcsv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 )
 
 const pluginName = "multicluster_gw"
@@ -114,6 +115,8 @@ func parseIp(c *caddy.Controller) (net.IP, net.IP) {
 func initializeController(checkControllerSetUp chan<- bool) {
 	log.Debug("Started to initialize Controller")
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(mcsv1a1.AddToScheme(scheme))
+	log.Debug("Added mcsv1a1 to scheme")
 	//+kubebuilder:scaffold:scheme
 
 	var metricsAddr string
@@ -160,7 +163,7 @@ func initializeController(checkControllerSetUp chan<- bool) {
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Guestbook")
+		setupLog.Error(err, "unable to create controller", "controller", "ServiceImportController")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
