@@ -45,11 +45,12 @@ func (Mcgw *MulticlusterGw) setup(c *caddy.Controller) error {
 	}
 
 	// TODO: check about the chanells that its the right way to do so:
-	checkControllerSetUp := make(chan bool)
-	go initializeController(checkControllerSetUp)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go initializeController(&wg)
 
-	//block until finished:
-	checkControllerSetUp <- true
+	//block until chanell gets a value in 'initializeController':
+	wg.Wait()
 
 	log.Debug("Started to register the Plugin")
 	// Add the Plugin to CoreDNS, so Servers can use it in their plugin chain.
@@ -112,12 +113,10 @@ func parseIp(c *caddy.Controller) (net.IP, net.IP) {
 	}
 }
 
-func initializeController(checkControllerSetUp chan<- bool) {
-	log.Debug("Started to initialize Controller")
-	log.Debug("Updated Controller setup")
+func initializeController(wg *sync.WaitGroup) {
+	log.Info("Started to initialize Controller")
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(mcsv1a1.AddToScheme(scheme))
-	log.Debug("Added mcsv1a1 to scheme")
 	//+kubebuilder:scaffold:scheme
 
 	var metricsAddr string
@@ -179,7 +178,7 @@ func initializeController(checkControllerSetUp chan<- bool) {
 	}
 
 	setupLog.Info("starting manager")
-	checkControllerSetUp <- true
+	wg.Done()
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
