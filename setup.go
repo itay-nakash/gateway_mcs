@@ -47,6 +47,7 @@ func (Mcgw *MulticlusterGw) setup(c *caddy.Controller) error {
 
 	// TODO: check about the chanells that its the right way to do so:
 	initializeController()
+	log.Info("Finished initialize Controllere function")
 
 	//block until chanell gets a value in 'initializeController':
 
