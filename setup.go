@@ -16,7 +16,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	mcsv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 )
 
@@ -46,9 +45,12 @@ func (Mcgw *MulticlusterGw) setup(c *caddy.Controller) error {
 	}
 
 	// TODO: check about the chanells that its the right way to do so:
-	initializeController()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go initializeController(&wg)
 
 	//block until chanell gets a value in 'initializeController':
+	wg.Wait()
 
 	log.Info("Started to register the Plugin")
 	// Add the Plugin to CoreDNS, so Servers can use it in their plugin chain.
@@ -114,7 +116,7 @@ func parseIp(c *caddy.Controller) (net.IP, net.IP) {
 	}
 }
 
-func initializeController() {
+func initializeController(wg *sync.WaitGroup) {
 	log.Info("Started to initialize Controller")
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(mcsv1a1.AddToScheme(scheme))
@@ -168,23 +170,18 @@ func initializeController() {
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
-	/* don't need to healthCheck, already happens in coredns
+
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
 	}
-	*/
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
 
 	setupLog.Info("starting manager")
-
-	go activateManager(mgr)
-}
-
-func activateManager(mgr manager.Manager) {
+	wg.Done()
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
