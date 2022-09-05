@@ -3,6 +3,7 @@ package multicluster_gw
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"strings"
 
@@ -58,7 +59,7 @@ func (mcgw *MulticlusterGw) New(zones []string) {
 func (m MulticlusterGw) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	// Debug log that we've have seen the query.
 	log.Debug("gw_mcs received req")
-
+	fmt.Print("check output")
 	// parse the req:
 	state := request.Request{W: w, Req: r}
 
