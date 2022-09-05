@@ -30,7 +30,7 @@ func (r *ServiceImportReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	//TODO: fix the logger
 	//log := r.Log.WithValues("serviceimport", req.NamespacedName)
 	//log.Info("Enter Reconcile", "req", req)
-	Mcgw.SISet = *NewSiSet() // TODO: figure what to do with the set
+
 	si := &mcsv1a.ServiceImport{}
 	siNameNs := types.NamespacedName{Name: req.Name, Namespace: req.Namespace}
 	err := r.Get(ctx, siNameNs, si)
@@ -65,6 +65,7 @@ func (r *ServiceImportReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
+// generate a name and ns as string in a constant format
 func GenerateNameAsString(name string, ns string) string {
 	return name + "." + ns
 }

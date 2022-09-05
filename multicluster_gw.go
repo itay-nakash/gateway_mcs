@@ -83,7 +83,6 @@ func (m MulticlusterGw) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *d
 
 	// checks if the SI exists:
 	if Mcgw.SISet.Contains(GenerateNameAsString(m.svcName, m.svcNS)) {
-
 		switch state.QType() {
 		case dns.TypeA:
 			log.Debug("Handles Type A request")

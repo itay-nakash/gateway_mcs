@@ -34,9 +34,9 @@ var (
 func init() {
 	log.Debug("Started init function")
 	plugin.Register(pluginName, Mcgw.setup)
-
 }
 
+// parse the corefile, setup the plugin with the given varibels and initialize controller
 func (Mcgw *MulticlusterGw) setup(c *caddy.Controller) error {
 	log.Info("Started setup function")
 	Mcgw.SISet.mutex = new(sync.RWMutex)
@@ -45,19 +45,14 @@ func (Mcgw *MulticlusterGw) setup(c *caddy.Controller) error {
 		return plugin.Error(pluginName, err)
 	}
 
-	// TODO: check about the chanells that its the right way to do so:
 	initializeController()
 	log.Info("Finished initialize Controllere function")
-
-	//block until chanell gets a value in 'initializeController':
-
-	log.Info("Started to register the Plugin")
 	// Add the Plugin to CoreDNS, so Servers can use it in their plugin chain.
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
 		Mcgw.Next = next
 		return Mcgw
 	})
-	log.Info("Finished adding the Plugin")
+	log.Info("Finished register the Plugin")
 
 	// All OK, return a nil error.
 	return nil
@@ -115,6 +110,7 @@ func parseIp(c *caddy.Controller) (net.IP, net.IP) {
 	}
 }
 
+// function to initalizeController, mostly copied from the 'main' that kubebuilder gives to controllers
 func initializeController() {
 	log.Info("Started to initialize Controller")
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
@@ -185,6 +181,7 @@ func initializeController() {
 	go activateManager(mgr)
 }
 
+// fucntion to activate the manager, splitted to a different func to do in a seperate go routine
 func activateManager(mgr manager.Manager) {
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
