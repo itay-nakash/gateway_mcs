@@ -4,8 +4,10 @@ Implementation of plugin for multicluster services networking, based on gateway-
 
 ## Description
 
-This plugin direct requsets with the configure zone to a gateway service,
-which will refer them to the wanted service in an outside cluster.
+This plugin direct requsets with the configure zone to a gateway service.
+The plugin checks if the wanted ServiceImport exists, and if it does, it will return the configued gw ip.
+The plugin uses a controller to watch the ServiceImports in the cluster,
+and keep track on which serviceImports exists, to know which req it should answer.
 
 ## Syntax
 
